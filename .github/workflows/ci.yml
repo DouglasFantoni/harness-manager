@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Typecheck & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Smoke test — CLI help
+        run: node dist/cli.js --help
+
+      - name: Smoke test — sync dry-run
+        run: |
+          mkdir -p /tmp/smoke/.harness
+          cp -r scaffold/. /tmp/smoke/.harness/
+          cat > /tmp/smoke/.harness/project-details.json << 'EOF'
+          {
+            "project": {
+              "name": "smoke-test",
+              "description": "CI smoke test",
+              "type": "single",
+              "stack": { "backend": ["nestjs"], "frontend": ["nextjs"], "infra": [] }
+            },
+            "structure": { "root": ".", "apps": ["."], "packages": [], "shared": [] },
+            "commands": {
+              "lint": "pnpm lint", "test": "pnpm test",
+              "typecheck": "pnpm typecheck", "build": "pnpm build",
+              "dev": "pnpm dev", "custom": {}
+            },
+            "conventions": { "branch_pattern": "", "commit_pattern": "", "pr_template": "" },
+            "context_hints": { "entry_points": [], "avoid_paths": ["dist/"], "critical_files": [] }
+          }
+          EOF
+          cd /tmp/smoke && node $GITHUB_WORKSPACE/dist/cli.js sync --dry-run
