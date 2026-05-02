@@ -26,7 +26,7 @@ globs: []
    - Comportamento assíncrono (se aplicável)
 5. Gerar os testes seguindo o padrão do projeto
 6. Rodar `{{commands.test}}` para confirmar que passam
-7. Se `--coverage`: rodar `{{commands.test:coverage}}` e apontar gaps restantes
+7. Se `--coverage`: rodar `{{commands.custom.testCoverage}}` e apontar gaps restantes
 
 ## Output
 
@@ -45,7 +45,7 @@ globs: []
 ## Referências de projeto
 
 - Test: `{{commands.test}}`
-- Coverage: `{{commands.custom.test:coverage}}`
+- Coverage: `{{commands.custom.testCoverage}}`
 
 ## Notas
 

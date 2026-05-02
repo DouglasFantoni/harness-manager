@@ -3,7 +3,7 @@ import { resolve } from 'path'
 import matter from 'gray-matter'
 import type { Registry, CommandMeta, SkillMeta } from './types.js'
 
-const HARNESS_ROOT = resolve(process.cwd(), '.harness')
+const HARNESS_ROOT = () => resolve(process.cwd(), '.harness')
 
 export async function loadRegistry(): Promise<Registry> {
   const [commands, skills] = await Promise.all([
@@ -15,51 +15,46 @@ export async function loadRegistry(): Promise<Registry> {
 
 async function loadCommands(): Promise<CommandMeta[]> {
   const indexRaw = await readFile(
-    resolve(HARNESS_ROOT, 'commands/_index.md'), 'utf-8'
+    resolve(HARNESS_ROOT(), 'commands/_index.md'), 'utf-8'
   ).catch(() => '')
 
+  if (!indexRaw) return []
+
+  // Tabela: | Comando | Descrição | Cursor | Claude Code | Copilot | Arquivo |
+  const rows = parseTable(indexRaw)
   const commands: CommandMeta[] = []
 
-  // Parseia a tabela markdown do _index.md
-  const rows = indexRaw
-    .split('\n')
-    .filter(line => line.startsWith('|') && !line.includes('---') && !line.includes('Comando'))
+  for (const cols of rows) {
+    if (cols.length < 6) continue
 
-  for (const row of rows) {
-    const cols = row.split('|').map(c => c.trim()).filter(Boolean)
-    if (cols.length < 5) continue
+    const name    = stripBackticks(cols[0])
+    const desc    = cols[1]
+    const cursor  = cols[2].includes('✅')
+    const claude  = cols[3].includes('✅')
+    const copilot = cols[4].includes('✅')
+    const file    = stripBackticks(cols[5])
 
-    const name = cols[0].replace('`', '').replace('`', '')  // remove backticks
-    const file = cols[4]  // coluna "Arquivo"
+    if (!name.startsWith('/')) continue
 
-    // Lê o frontmatter do arquivo do command para pegar supported_by
-    const cmdPath = resolve(HARNESS_ROOT, 'commands', file)
-    let supported_by: string[] = []
-    let description = cols[1]
+    const supported_by_table: string[] = [
+      cursor  && 'cursor',
+      claude  && 'claude-code',
+      copilot && 'copilot',
+    ].filter(Boolean) as string[]
+
+    let supported_by = supported_by_table
+    let description  = desc
     let globs: string[] = []
 
     try {
-      const raw = await readFile(cmdPath, 'utf-8')
+      const raw = await readFile(resolve(HARNESS_ROOT(), 'commands', file), 'utf-8')
       const { data } = matter(raw)
-      supported_by = data.supported_by ?? []
-      description = data.description ?? description
-      globs = data.globs ?? []
-    } catch {
-      // arquivo não encontrado — usa defaults da tabela
-      const cursorOk = cols[2] === '✅'
-      const claudeOk = cols[3] === '✅'
-      if (cursorOk) supported_by.push('cursor')
-      if (claudeOk) supported_by.push('claude-code')
-    }
+      if (data.supported_by?.length) supported_by = data.supported_by
+      if (data.description)          description  = data.description
+      if (data.globs?.length)        globs        = data.globs
+    } catch {}
 
-    commands.push({
-      name,
-      file: file.replace('`', '').replace('`', ''),
-      description,
-      supported_by,
-      requires: [],
-      globs,
-    })
+    commands.push({ name, file, description, supported_by, requires: [], globs })
   }
 
   return commands
@@ -67,28 +62,25 @@ async function loadCommands(): Promise<CommandMeta[]> {
 
 async function loadSkills(): Promise<SkillMeta[]> {
   const indexRaw = await readFile(
-    resolve(HARNESS_ROOT, 'skills/_index.md'), 'utf-8'
+    resolve(HARNESS_ROOT(), 'skills/_index.md'), 'utf-8'
   ).catch(() => '')
 
+  if (!indexRaw) return []
+
+  const rows = parseTable(indexRaw)
   const skills: SkillMeta[] = []
 
-  const rows = indexRaw
-    .split('\n')
-    .filter(line => line.startsWith('|') && !line.includes('---') && !line.includes('Skill'))
-
-  for (const row of rows) {
-    const cols = row.split('|').map(c => c.trim()).filter(Boolean)
+  for (const cols of rows) {
     if (cols.length < 2) continue
 
-    const name = cols[0]
-    const domain = cols[1]
-    const weightRaw = cols[2] ?? '~0'
-    const weight = parseInt(weightRaw.replace(/[^0-9]/g, '') || '0')
+    const name   = stripBackticks(cols[0])
+    const domain = cols[1]?.trim() ?? ''
+    const weight = parseInt(cols[2]?.replace(/[^0-9]/g, '') ?? '0') || 0
+
+    if (!name) continue
 
     skills.push({
-      name,
-      domain,
-      weight,
+      name, domain, weight,
       exposes_command: [],
       required_by: [],
       load_with: [],
@@ -97,4 +89,24 @@ async function loadSkills(): Promise<SkillMeta[]> {
   }
 
   return skills
+}
+
+function parseTable(markdown: string): string[][] {
+  return markdown
+    .split('\n')
+    .filter(line => {
+      const t = line.trim()
+      return t.startsWith('|') && !t.includes('---')
+    })
+    .map(line =>
+      line.split('|').slice(1, -1).map(c => c.trim())
+    )
+    .filter(cols => {
+      const first = cols[0]?.toLowerCase() ?? ''
+      return !['comando', 'skill', 'hook', 'command'].includes(first)
+    })
+}
+
+function stripBackticks(value: string): string {
+  return value.replace(/`/g, '').trim()
 }

@@ -3,6 +3,7 @@ import { generateContext } from './context-gen.js'
 import { loadRegistry } from './registry.js'
 import { ClaudeCodeAdapter } from './adapters/claude-code.js'
 import { CursorAdapter } from './adapters/cursor.js'
+import { resolvePlaceholders, resetWarnings } from './resolver.js'
 import { CopilotAdapter } from './adapters/copilot.js'
 import type { SyncFlags } from './types.js'
 
@@ -16,6 +17,7 @@ type ToolName = keyof typeof ADAPTERS
 
 export async function runSync(flags: SyncFlags): Promise<void> {
   console.log('🔄 harness sync\n')
+  resetWarnings()
 
   if (flags.dryRun) {
     console.log('ℹ️  Modo --dry-run: nenhum arquivo será escrito\n')
