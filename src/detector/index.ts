@@ -4,6 +4,12 @@ import type { ProjectDetails } from '../types.js'
 
 const ROOT = process.cwd()
 
+// Helper: (condition && value) retorna false | string — filter tipado resolve
+function pick(condition: boolean, value: string): string | undefined {
+  return condition ? value : undefined
+}
+
+
 export interface DetectionResult {
   details: ProjectDetails
   reviewHints: string[]
@@ -19,8 +25,8 @@ export async function detectProject(): Promise<DetectionResult> {
 
   const details: ProjectDetails = {
     project: {
-      name: rootPkg?.name ?? basename(ROOT),
-      description: rootPkg?.description ?? '',
+      name: (rootPkg?.name as string | undefined) ?? basename(ROOT),
+      description: (rootPkg?.description as string | undefined) ?? '',
       type: isMonorepo ? 'monorepo' : 'single',
       stack,
     },
@@ -51,28 +57,28 @@ async function detectStack(pkg: Record<string, unknown> | null) {
 
   return {
     backend: [
-      has('@nestjs/core') && 'nestjs',
-      has('express') && 'express',
-      has('fastify') && 'fastify',
-      has('typeorm') && 'typeorm',
-      has('@prisma/client') && 'prisma',
-      has('typescript') && 'typescript',
+      pick(has('@nestjs/core'), 'nestjs'),
+      pick(has('express'), 'express'),
+      pick(has('fastify'), 'fastify'),
+      pick(has('typeorm'), 'typeorm'),
+      pick(has('@prisma/client'), 'prisma'),
+      pick(has('typescript'), 'typescript'),
     ].filter(Boolean) as string[],
 
     frontend: [
-      has('next') && 'nextjs',
-      has('react') && 'react',
-      has('vue') && 'vue',
-      has('@remix-run/react') && 'remix',
-      has('@radix-ui/react-dialog') && 'radix-ui',
-      has('tailwindcss') && 'tailwindcss',
+      pick(has('next'), 'nextjs'),
+      pick(has('react'), 'react'),
+      pick(has('vue'), 'vue'),
+      pick(has('@remix-run/react'), 'remix'),
+      pick(has('@radix-ui/react-dialog'), 'radix-ui'),
+      pick(has('tailwindcss'), 'tailwindcss'),
     ].filter(Boolean) as string[],
 
     infra: [
-      (await fileExists('docker-compose.yml') || await fileExists('Dockerfile')) && 'docker',
-      await fileExists('.github/workflows') && 'github-actions',
-      await fileExists('turbo.json') && 'turborepo',
-      await fileExists('nx.json') && 'nx',
+      pick(await fileExists('docker-compose.yml') || await fileExists('Dockerfile'), 'docker'),
+      pick(await fileExists('.github/workflows'), 'github-actions'),
+      pick(await fileExists('turbo.json'), 'turborepo'),
+      pick(await fileExists('nx.json'), 'nx'),
     ].filter(Boolean) as string[],
   }
 }
