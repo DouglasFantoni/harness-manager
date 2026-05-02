@@ -2,7 +2,8 @@ import { readFile, access, readdir } from 'fs/promises'
 import { resolve, join, basename } from 'path'
 import type { ProjectDetails } from '../types.js'
 
-const ROOT = process.cwd()
+// getRoot() é resolvido em runtime para permitir mocking em testes
+function getRoot() { return process.cwd() }
 
 // Helper: (condition && value) retorna false | string — filter tipado resolve
 function pick(condition: boolean, value: string): string | undefined {
@@ -25,7 +26,7 @@ export async function detectProject(): Promise<DetectionResult> {
 
   const details: ProjectDetails = {
     project: {
-      name: (rootPkg?.name as string | undefined) ?? basename(ROOT),
+      name: (rootPkg?.name as string | undefined) ?? basename(getRoot()),
       description: (rootPkg?.description as string | undefined) ?? '',
       type: isMonorepo ? 'monorepo' : 'single',
       stack,
@@ -103,10 +104,12 @@ async function detectStructure(
     return { root: '.', apps: ['.'], packages: [], shared: [] }
   }
 
-  let workspaceGlobs: string[] = (pkg?.workspaces as string[]) ?? []
+  let workspaceGlobs: string[] = (
+    (pkg?.workspaces as string[]) ?? []
+  ).map(g => g.replace(/\/\*\*?$/, ''))  // normaliza "apps/*" -> "apps"
 
   if (!workspaceGlobs.length && await fileExists('pnpm-workspace.yaml')) {
-    const raw = await readFile(resolve(ROOT, 'pnpm-workspace.yaml'), 'utf-8')
+    const raw = await readFile(resolve(getRoot(), 'pnpm-workspace.yaml'), 'utf-8')
     const match = raw.match(/packages:\s*([\s\S]*?)(?=\n\w|$)/)
     if (match) {
       workspaceGlobs = match[1]
@@ -121,7 +124,7 @@ async function detectStructure(
   const packages: string[] = []
 
   for (const glob of workspaceGlobs) {
-    const dir = resolve(ROOT, glob)
+    const dir = resolve(getRoot(), glob)
     const children = await readdirSafe(dir)
 
     for (const child of children) {
@@ -158,8 +161,8 @@ function detectCommands(pkg: Record<string, unknown> | null): ProjectDetails['co
 import { existsSync } from 'fs'
 
 function detectPackageManager(): string {
-  if (existsSync(resolve(ROOT, 'pnpm-lock.yaml'))) return 'pnpm'
-  if (existsSync(resolve(ROOT, 'yarn.lock'))) return 'yarn'
+  if (existsSync(resolve(getRoot(), 'pnpm-lock.yaml'))) return 'pnpm'
+  if (existsSync(resolve(getRoot(), 'yarn.lock'))) return 'yarn'
   return 'npm run'
 }
 
@@ -234,7 +237,7 @@ function buildReviewHints(details: ProjectDetails): string[] {
 
 async function readJsonSafe(path: string): Promise<Record<string, unknown> | null> {
   try {
-    return JSON.parse(await readFile(resolve(ROOT, path), 'utf-8'))
+    return JSON.parse(await readFile(resolve(getRoot(), path), 'utf-8'))
   } catch {
     return null
   }
@@ -242,7 +245,7 @@ async function readJsonSafe(path: string): Promise<Record<string, unknown> | nul
 
 async function fileExists(path: string): Promise<boolean> {
   try {
-    await access(resolve(ROOT, path))
+    await access(resolve(getRoot(), path))
     return true
   } catch {
     return false

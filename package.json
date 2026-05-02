@@ -1,7 +1,7 @@
 {
   "name": "@ai-harness/cli",
   "version": "1.0.0",
-  "description": "AI Harness Framework — bootstrap and sync context for AI tools in any project",
+  "description": "AI Harness Framework \u2014 bootstrap and sync context for AI tools in any project",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -20,17 +20,19 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepublishOnly": "npm run clean && npm run build",
-    "harness:sync": "harness sync",
-    "harness:init": "harness sync --init"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "gray-matter": "^4.0.3"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@vitest/coverage-v8": "^4.1.5",
     "tsx": "^4.15.0",
     "typescript": "^5.4.0",
-    "@types/node": "^20.0.0",
-    "@ai-harness/sync": "latest"
+    "vitest": "^4.1.5"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -53,6 +55,27 @@
     "./sync": {
       "import": "./dist/sync.js",
       "types": "./dist/sync.d.ts"
+    }
+  },
+  "vitest": {
+    "environment": "node",
+    "include": [
+      "src/**/*.test.ts",
+      "tests/**/*.test.ts"
+    ],
+    "coverage": {
+      "provider": "v8",
+      "reporter": [
+        "text",
+        "lcov"
+      ],
+      "include": [
+        "src/**/*.ts"
+      ],
+      "exclude": [
+        "src/cli.ts",
+        "src/**/*.test.ts"
+      ]
     }
   }
 }
