@@ -1,7 +1,7 @@
 {
   "name": "@ai-harness/cli",
   "version": "1.0.0",
-  "description": "AI Harness Framework \u2014 bootstrap and sync context for AI tools in any project",
+  "description": "AI Harness Framework — bootstrap and sync context for AI tools in any project",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -19,7 +19,9 @@
     "dev:sync": "tsx src/cli.ts sync",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "harness:sync": "harness sync",
+    "harness:init": "harness sync --init"
   },
   "dependencies": {
     "gray-matter": "^4.0.3"
@@ -27,7 +29,8 @@
   "devDependencies": {
     "tsx": "^4.15.0",
     "typescript": "^5.4.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "@ai-harness/sync": "latest"
   },
   "engines": {
     "node": ">=18.0.0"

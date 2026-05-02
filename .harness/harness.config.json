@@ -1,0 +1,39 @@
+{
+  "version": "1.0.0",
+  "active_tools": ["cursor", "claude-code"],
+
+  "tools": {
+    "cursor": {
+      "enabled": true,
+      "slash_commands": true,
+      "rules_format": "mdc",
+      "rules_folder": ".cursor/rules/",
+      "supports_mcp": true,
+      "context_budget": "medium",
+      "context_tokens_est": 8000
+    },
+    "claude-code": {
+      "enabled": true,
+      "slash_commands": true,
+      "context_file": "CLAUDE.md",
+      "supports_mcp": true,
+      "supports_bash": true,
+      "context_budget": "large",
+      "context_tokens_est": 20000
+    },
+    "copilot": {
+      "enabled": false,
+      "slash_commands": false,
+      "context_file": ".github/copilot-instructions.md",
+      "supports_mcp": false,
+      "context_budget": "small",
+      "context_tokens_est": 3000
+    }
+  },
+
+  "context_strategy": {
+    "always_load": ["core/rules.md", "core/glossary.md"],
+    "load_on_demand": ["skills/", "memory/"],
+    "never_load": ["evolution/", "adapters/"]
+  }
+}

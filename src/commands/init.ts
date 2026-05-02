@@ -5,7 +5,7 @@ import { detectProject } from '../detector/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = process.cwd()
-const SCAFFOLD = resolve(__dirname, '../../../scaffold')
+const SCAFFOLD = resolve(__dirname, '../../scaffold')
 const HARNESS_DIR = resolve(ROOT, '.harness')
 
 export async function runInit(args: string[]): Promise<void> {

@@ -8,3 +8,10 @@ CLAUDE.md
 .harness/adapters/
 .harness/evolution/proposed/*
 !.harness/evolution/proposed/.gitkeep
+
+# AI Harness — gerado pelo sync
+CLAUDE.md
+.cursor/rules/
+.harness/adapters/
+.harness/evolution/proposed/*
+!.harness/evolution/proposed/.gitkeep
