@@ -1,0 +1,49 @@
+{
+  "_readme": "Copie para project-details.json e ajuste para o seu projeto. Este arquivo é gerado automaticamente pelo 'harness sync --init' com base no projeto detectado.",
+
+  "project": {
+    "name": "my-project",
+    "description": "",
+    "type": "monorepo",
+    "stack": {
+      "backend": [],
+      "frontend": [],
+      "infra": []
+    }
+  },
+
+  "structure": {
+    "root": ".",
+    "apps": [],
+    "packages": [],
+    "shared": []
+  },
+
+  "commands": {
+    "lint": "",
+    "test": "",
+    "typecheck": "",
+    "build": "",
+    "dev": "",
+    "custom": {}
+  },
+
+  "conventions": {
+    "branch_pattern": "",
+    "commit_pattern": "",
+    "pr_template": ""
+  },
+
+  "context_hints": {
+    "entry_points": [],
+    "avoid_paths": [
+      "dist/",
+      ".next/",
+      "node_modules/",
+      "coverage/",
+      ".turbo/",
+      "build/"
+    ],
+    "critical_files": []
+  }
+}

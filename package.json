@@ -1,0 +1,43 @@
+{
+  "name": "@ai-harness/cli",
+  "version": "1.0.0",
+  "description": "AI Harness Framework — bootstrap and sync context for AI tools in any project",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "harness": "./dist/cli.js"
+  },
+  "files": [
+    "dist/",
+    "scaffold/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev:init": "tsx src/cli.ts init",
+    "dev:sync": "tsx src/cli.ts sync",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.0",
+    "@types/node": "^20.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "ai",
+    "harness",
+    "cursor",
+    "claude",
+    "copilot",
+    "context",
+    "scaffold"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Harness — gerado pelo sync (nos projetos que usam o harness)
+CLAUDE.md
+.cursor/rules/
+.harness/adapters/
+.harness/evolution/proposed/*
+!.harness/evolution/proposed/.gitkeep
