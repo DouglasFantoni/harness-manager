@@ -45,6 +45,7 @@ async function loadCommands(): Promise<CommandMeta[]> {
     let supported_by = supported_by_table
     let description  = desc
     let globs: string[] = []
+    let requires: string[] = []
 
     try {
       const raw = await readFile(resolve(HARNESS_ROOT(), 'commands', file), 'utf-8')
@@ -52,9 +53,10 @@ async function loadCommands(): Promise<CommandMeta[]> {
       if (data.supported_by?.length) supported_by = data.supported_by
       if (data.description)          description  = data.description
       if (data.globs?.length)        globs        = data.globs
+      if (data.requires?.length)     requires     = data.requires
     } catch {}
 
-    commands.push({ name, file, description, supported_by, requires: [], globs })
+    commands.push({ name, file, description, supported_by, requires, globs })
   }
 
   return commands

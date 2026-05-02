@@ -2,14 +2,18 @@ import { readFile } from 'fs/promises'
 import { resolve } from 'path'
 import type { HarnessConfig, ProjectDetails } from './types.js'
 
-const HARNESS_ROOT = resolve(process.cwd(), '.harness')
+function harnessRoot() {
+  return resolve(process.cwd(), '.harness')
+}
 
 export async function loadConfig(): Promise<{ config: HarnessConfig; project: ProjectDetails }> {
+  const root = harnessRoot()
+
   const [configRaw, projectRaw] = await Promise.all([
-    readFile(resolve(HARNESS_ROOT, 'harness.config.json'), 'utf-8').catch(() => {
+    readFile(resolve(root, 'harness.config.json'), 'utf-8').catch(() => {
       throw new Error('.harness/harness.config.json não encontrado. Rode: npx @ai-harness/cli init')
     }),
-    readFile(resolve(HARNESS_ROOT, 'project-details.json'), 'utf-8').catch(() => {
+    readFile(resolve(root, 'project-details.json'), 'utf-8').catch(() => {
       throw new Error('.harness/project-details.json não encontrado. Rode: npx @ai-harness/cli init')
     }),
   ])

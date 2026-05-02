@@ -4,8 +4,8 @@ import matter from 'gray-matter'
 import { resolvePlaceholders } from '../resolver.js'
 import type { ToolConfig, ProjectDetails, Registry, AdapterResult } from '../types.js'
 
-const ROOT = process.cwd()
-const HARNESS_ROOT = resolve(ROOT, '.harness')
+function getRoot() { return process.cwd() }
+function harnessRoot() { return resolve(getRoot(), '.harness') }
 
 export class ClaudeCodeAdapter {
   constructor(
@@ -32,8 +32,8 @@ export class ClaudeCodeAdapter {
     const content = sections.filter(Boolean).join('\n\n---\n\n')
     const resolved = resolvePlaceholders(content, this.project)
 
-    const outputPath = resolve(ROOT, this.toolConfig.context_file!)
-    const generatedPath = resolve(HARNESS_ROOT, 'commands/generated/claude-code/CLAUDE.md')
+    const outputPath = resolve(getRoot(), this.toolConfig.context_file!)
+    const generatedPath = resolve(harnessRoot(), 'commands/generated/claude-code/CLAUDE.md')
 
     if (!dryRun) {
       await mkdir(resolve(generatedPath, '..'), { recursive: true })
@@ -60,7 +60,7 @@ Skills disponíveis em \`.harness/skills/_index.md\`.`
   }
 
   private async buildSkillsIndex(): Promise<string> {
-    const content = await readFile(resolve(HARNESS_ROOT, 'skills/_index.md'), 'utf-8').catch(() => '')
+    const content = await readFile(resolve(harnessRoot(), 'skills/_index.md'), 'utf-8').catch(() => '')
     return `## Skills\n\n${content}\n\n> Para detalhes de uma skill: \`.harness/skills/{domain}/SKILL.md\``
   }
 
@@ -72,7 +72,7 @@ Skills disponíveis em \`.harness/skills/_index.md\`.`
     const lines = ['## Slash Commands']
 
     for (const cmd of supported) {
-      const filePath = resolve(HARNESS_ROOT, 'commands', cmd.file)
+      const filePath = resolve(harnessRoot(), 'commands', cmd.file)
       const raw = await readFile(filePath, 'utf-8').catch(() => null)
       if (!raw) continue
 
@@ -84,7 +84,7 @@ Skills disponíveis em \`.harness/skills/_index.md\`.`
   }
 
   private async loadSection(relativePath: string, title: string): Promise<string> {
-    const raw = await readFile(resolve(HARNESS_ROOT, relativePath), 'utf-8').catch(() => null)
+    const raw = await readFile(resolve(harnessRoot(), relativePath), 'utf-8').catch(() => null)
     if (!raw) return ''
     const { content } = matter(raw)
     return `${title}\n\n${content.trim()}`

@@ -75,13 +75,25 @@ async function detectStack(pkg: Record<string, unknown> | null) {
       pick(has('tailwindcss'), 'tailwindcss'),
     ].filter(Boolean) as string[],
 
-    infra: [
-      pick(await fileExists('docker-compose.yml') || await fileExists('Dockerfile'), 'docker'),
-      pick(await fileExists('.github/workflows'), 'github-actions'),
-      pick(await fileExists('turbo.json'), 'turborepo'),
-      pick(await fileExists('nx.json'), 'nx'),
-    ].filter(Boolean) as string[],
+    infra: await detectInfra(),
   }
+}
+
+
+async function detectInfra(): Promise<string[]> {
+  const [hasDocker1, hasDocker2, hasGithub, hasTurbo, hasNx] = await Promise.all([
+    fileExists('docker-compose.yml'),
+    fileExists('Dockerfile'),
+    fileExists('.github/workflows'),
+    fileExists('turbo.json'),
+    fileExists('nx.json'),
+  ])
+  return [
+    pick(hasDocker1 || hasDocker2, 'docker'),
+    pick(hasGithub, 'github-actions'),
+    pick(hasTurbo, 'turborepo'),
+    pick(hasNx, 'nx'),
+  ].filter(Boolean) as string[]
 }
 
 // ─── Monorepo ─────────────────────────────────────────────────────────────────
@@ -130,7 +142,7 @@ async function detectStructure(
     for (const child of children) {
       const fullPath = join(glob, child)
       if (!(await fileExists(join(fullPath, 'package.json')))) continue
-      if (glob.includes('app')) apps.push(fullPath)
+      if (isAppDir(glob)) apps.push(fullPath)
       else packages.push(fullPath)
     }
   }
@@ -169,20 +181,20 @@ function detectPackageManager(): string {
 // ─── Conventions ──────────────────────────────────────────────────────────────
 
 async function detectConventions(): Promise<ProjectDetails['conventions']> {
-  const hasCommitlint =
-    await fileExists('.commitlintrc') ||
-    await fileExists('.commitlintrc.json') ||
-    await fileExists('commitlint.config.js') ||
-    await fileExists('commitlint.config.ts')
+  const [cl1, cl2, cl3, cl4, hasPrTemplate] = await Promise.all([
+    fileExists('.commitlintrc'),
+    fileExists('.commitlintrc.json'),
+    fileExists('commitlint.config.js'),
+    fileExists('commitlint.config.ts'),
+    fileExists('.github/pull_request_template.md'),
+  ])
 
-  const prTemplate = await fileExists('.github/pull_request_template.md')
-    ? '.github/pull_request_template.md'
-    : ''
+  const hasCommitlint = cl1 || cl2 || cl3 || cl4
 
   return {
     branch_pattern: '',
     commit_pattern: hasCommitlint ? 'conventional-commits' : '',
-    pr_template: prTemplate,
+    pr_template: hasPrTemplate ? '.github/pull_request_template.md' : '',
   }
 }
 
@@ -231,6 +243,17 @@ function buildReviewHints(details: ProjectDetails): string[] {
   hints.push('Remova entradas de stack que foram detectadas incorretamente')
 
   return hints
+}
+
+
+// Classifica um diretório workspace como "app" ou "package"
+// Heurística: apps tendem a ser executáveis (têm main/entry), packages são libs
+const APP_DIR_PATTERNS = ['app', 'apps', 'service', 'services', 'frontend', 'web', 'api', 'server', 'client', 'site']
+
+function isAppDir(glob: string): boolean {
+  const normalized = glob.toLowerCase().replace(/\/+$/, '')
+  const segment = normalized.split('/').pop() ?? normalized
+  return APP_DIR_PATTERNS.some(p => segment === p || segment.startsWith(p + '-') || segment.endsWith('-' + p))
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

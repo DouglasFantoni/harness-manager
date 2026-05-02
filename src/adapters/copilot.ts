@@ -4,8 +4,8 @@ import matter from 'gray-matter'
 import { resolvePlaceholders } from '../resolver.js'
 import type { ToolConfig, ProjectDetails, Registry, AdapterResult } from '../types.js'
 
-const ROOT = process.cwd()
-const HARNESS_ROOT = resolve(ROOT, '.harness')
+function getRoot() { return process.cwd() }
+function harnessRoot() { return resolve(getRoot(), '.harness') }
 
 export class CopilotAdapter {
   constructor(
@@ -28,7 +28,7 @@ export class CopilotAdapter {
     const content = sections.filter(Boolean).join('\n\n---\n\n')
     const resolved = resolvePlaceholders(content, this.project)
 
-    const outputPath = resolve(ROOT, this.toolConfig.context_file!)
+    const outputPath = resolve(getRoot(), this.toolConfig.context_file!)
 
     if (!dryRun) {
       await mkdir(resolve(outputPath, '..'), { recursive: true })
@@ -61,7 +61,7 @@ export class CopilotAdapter {
   }
 
   private async loadSection(relativePath: string, title: string): Promise<string> {
-    const raw = await readFile(resolve(HARNESS_ROOT, relativePath), 'utf-8').catch(() => null)
+    const raw = await readFile(resolve(harnessRoot(), relativePath), 'utf-8').catch(() => null)
     if (!raw) return ''
     const { content } = matter(raw)
     return `${title}\n\n${content.trim()}`

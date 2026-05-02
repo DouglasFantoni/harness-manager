@@ -15,6 +15,16 @@ const USAGE = `
     harness sync --force-context         Force context.md regeneration
 `
 
+
+// Parseia flags no formato --flag=value ou --flag value
+function parseFlag(args: string[], flag: string): string | undefined {
+  for (let i = 0; i < args.length; i++) {
+    if (args[i].startsWith(`${flag}=`)) return args[i].split('=')[1]
+    if (args[i] === flag && args[i + 1] && !args[i + 1].startsWith('--')) return args[i + 1]
+  }
+  return undefined
+}
+
 async function main() {
   if (!command || command === '--help' || command === '-h') {
     console.log(USAGE)
@@ -30,8 +40,7 @@ async function main() {
     await runSync({
       dryRun: args.includes('--dry-run'),
       forceContext: args.includes('--force-context'),
-      only: args.find(a => a.startsWith('--only='))?.split('=')[1]
-        ?? (args.includes('--only') ? args[args.indexOf('--only') + 1] : undefined),
+      only: parseFlag(args, '--only'),
     })
     return
   }

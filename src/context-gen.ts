@@ -1,25 +1,26 @@
-import { readFile, writeFile, readdir } from 'fs/promises'
+import { readFile, writeFile } from 'fs/promises'
 import { resolve, join } from 'path'
 import type { ProjectDetails } from './types.js'
 
-const ROOT = process.cwd()
+function getRoot() { return process.cwd() }
 
 export async function generateContext(project: ProjectDetails, force = false): Promise<boolean> {
-  const sections: string[] = []
+  const sections: string[] = [
+    `# Project Context — ${project.project.name}`,
+    `> Gerado automaticamente pelo harness sync. Não edite manualmente.\n`,
+    `## Stack\n${formatStack(project.project.stack)}`,
+    `## Tipo\n${project.project.type}`,
+    `## Estrutura\n${formatStructure(project)}`,
+    `## Entry Points\n${formatList(project.context_hints.entry_points)}`,
+    `## Arquivos Críticos\n${formatList(project.context_hints.critical_files)}`,
+    `## Paths a Ignorar\n${formatList(project.context_hints.avoid_paths)}`,
+    `## Packages Internos\n${await formatPackages(project)}`,
+    `## Convenções\n${formatConventions(project)}`,
+  ]
 
-  sections.push(`# Project Context — ${project.project.name}`)
-  sections.push(`> Gerado automaticamente pelo harness sync. Não edite manualmente.\n`)
-  sections.push(`## Stack\n${formatStack(project.project.stack)}`)
-  sections.push(`## Tipo\n${project.project.type}`)
-  sections.push(`## Estrutura\n${formatStructure(project)}`)
-  sections.push(`## Entry Points\n${formatList(project.context_hints.entry_points)}`)
-  sections.push(`## Arquivos Críticos\n${formatList(project.context_hints.critical_files)}`)
-  sections.push(`## Paths a Ignorar\n${formatList(project.context_hints.avoid_paths)}`)
-  sections.push(`## Packages Internos\n${await formatPackages(project)}`)
-  sections.push(`## Convenções\n${formatConventions(project)}`)
-
-  const content = sections.join('\n\n')
-  const outputPath = resolve(ROOT, '.harness/core/context.md')
+  // B9/M3 — filtra seções vazias antes de join
+  const content = sections.filter(Boolean).join('\n\n')
+  const outputPath = resolve(getRoot(), '.harness/core/context.md')
 
   if (!force) {
     try {
@@ -38,16 +39,16 @@ async function formatPackages(project: ProjectDetails): Promise<string> {
   const allPaths = [...project.structure.packages, ...project.structure.apps]
   if (!allPaths.length) return '_Nenhum package definido_'
 
-  const lines: string[] = []
-  for (const pkgPath of allPaths) {
+  const lines = await Promise.all(allPaths.map(async pkgPath => {
     try {
-      const raw = await readFile(resolve(ROOT, pkgPath, 'package.json'), 'utf-8')
+      const raw = await readFile(resolve(getRoot(), pkgPath, 'package.json'), 'utf-8')
       const pkg = JSON.parse(raw)
-      lines.push(`- \`${pkgPath}\` → **${pkg.name}** v${pkg.version ?? '?'}`)
+      return `- \`${pkgPath}\` → **${pkg.name}** v${pkg.version ?? '?'}`
     } catch {
-      lines.push(`- \`${pkgPath}\` → _(package.json não encontrado)_`)
+      return `- \`${pkgPath}\` → _(package.json não encontrado)_`
     }
-  }
+  }))
+
   return lines.join('\n')
 }
 

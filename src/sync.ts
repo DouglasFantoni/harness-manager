@@ -1,9 +1,10 @@
+import { relative } from 'path'
 import { loadConfig } from './config.js'
 import { generateContext } from './context-gen.js'
 import { loadRegistry } from './registry.js'
+import { resetWarnings } from './resolver.js'
 import { ClaudeCodeAdapter } from './adapters/claude-code.js'
 import { CursorAdapter } from './adapters/cursor.js'
-import { resolvePlaceholders, resetWarnings } from './resolver.js'
 import { CopilotAdapter } from './adapters/copilot.js'
 import type { SyncFlags } from './types.js'
 
@@ -23,21 +24,15 @@ export async function runSync(flags: SyncFlags): Promise<void> {
     console.log('ℹ️  Modo --dry-run: nenhum arquivo será escrito\n')
   }
 
-  // 1. Carrega configs
   const { config, project } = await loadConfig()
 
-  // 2. Gera/atualiza core/context.md
   if (!flags.dryRun) {
     const updated = await generateContext(project, flags.forceContext)
-    if (updated) {
-      console.log('📄 core/context.md atualizado\n')
-    }
+    if (updated) console.log('📄 core/context.md atualizado\n')
   }
 
-  // 3. Carrega registry de skills e commands
   const registry = await loadRegistry()
 
-  // 4. Para cada tool ativa, gera o adapter
   const toolEntries = Object.entries(config.tools).filter(([name, tool]) => {
     if (!tool.enabled) return false
     if (flags.only && name !== flags.only) return false
@@ -59,10 +54,8 @@ export async function runSync(flags: SyncFlags): Promise<void> {
 
     const icon = flags.dryRun ? '🔍' : '✅'
     console.log(`${icon} ${toolName}:`)
-    result.files.forEach(f => {
-      const relative = f.replace(process.cwd() + '/', '')
-      console.log(`   → ${relative}`)
-    })
+    // B10 — usa path.relative() ao invés de string replace com separador hardcoded
+    result.files.forEach(f => console.log(`   → ${relative(process.cwd(), f)}`))
     console.log()
   }
 

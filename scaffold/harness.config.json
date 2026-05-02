@@ -1,7 +1,5 @@
 {
   "version": "1.0.0",
-  "active_tools": ["cursor", "claude-code"],
-
   "tools": {
     "cursor": {
       "enabled": true,
@@ -30,10 +28,18 @@
       "context_tokens_est": 3000
     }
   },
-
   "context_strategy": {
-    "always_load": ["core/rules.md", "core/glossary.md"],
-    "load_on_demand": ["skills/", "memory/"],
-    "never_load": ["evolution/", "adapters/"]
+    "always_load": [
+      "core/rules.md",
+      "core/glossary.md"
+    ],
+    "load_on_demand": [
+      "skills/",
+      "memory/"
+    ],
+    "never_load": [
+      "evolution/",
+      "adapters/"
+    ]
   }
 }

@@ -4,8 +4,8 @@ import matter from 'gray-matter'
 import { resolvePlaceholders } from '../resolver.js'
 import type { ToolConfig, ProjectDetails, Registry, AdapterResult } from '../types.js'
 
-const ROOT = process.cwd()
-const HARNESS_ROOT = resolve(ROOT, '.harness')
+function getRoot() { return process.cwd() }
+function harnessRoot() { return resolve(getRoot(), '.harness') }
 
 export class CursorAdapter {
   constructor(
@@ -16,7 +16,7 @@ export class CursorAdapter {
 
   async generate(dryRun = false): Promise<AdapterResult> {
     const files: string[] = []
-    const rulesDir = resolve(ROOT, this.toolConfig.rules_folder!)
+    const rulesDir = resolve(getRoot(), this.toolConfig.rules_folder!)
 
     if (!dryRun) {
       await mkdir(rulesDir, { recursive: true })
@@ -34,7 +34,7 @@ export class CursorAdapter {
     )
 
     for (const cmd of supported) {
-      const filePath = resolve(HARNESS_ROOT, 'commands', cmd.file)
+      const filePath = resolve(harnessRoot(), 'commands', cmd.file)
       const raw = await readFile(filePath, 'utf-8').catch(() => null)
       if (!raw) continue
 
@@ -58,7 +58,7 @@ export class CursorAdapter {
   }
 
   private async buildMainRule(): Promise<string> {
-    const rules = await readFile(resolve(HARNESS_ROOT, 'core/rules.md'), 'utf-8').catch(() => '')
+    const rules = await readFile(resolve(harnessRoot(), 'core/rules.md'), 'utf-8').catch(() => '')
     const { content } = matter(rules)
 
     return this.buildMdc({

@@ -12,7 +12,6 @@ export interface ToolConfig {
 
 export interface HarnessConfig {
   version: string
-  active_tools: string[]
   tools: Record<string, ToolConfig>
   context_strategy: {
     always_load: string[]

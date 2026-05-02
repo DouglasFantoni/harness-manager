@@ -1,12 +1,13 @@
-import { cp, writeFile, readFile, access, mkdir } from 'fs/promises'
+import { cp, writeFile, readFile, access } from 'fs/promises'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { detectProject } from '../detector/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const ROOT = process.cwd()
 const SCAFFOLD = resolve(__dirname, '../../scaffold')
-const HARNESS_DIR = resolve(ROOT, '.harness')
+
+function getRoot() { return process.cwd() }
+function harnessDir() { return resolve(getRoot(), '.harness') }
 
 export async function runInit(args: string[]): Promise<void> {
   const force = args.includes('--force')
@@ -14,29 +15,31 @@ export async function runInit(args: string[]): Promise<void> {
   console.log('🪢  AI Harness — init\n')
 
   // 1. Verifica se já existe
-  const alreadyExists = await fileExists(HARNESS_DIR)
+  const alreadyExists = await fileExists(harnessDir())
   if (alreadyExists && !force) {
     console.log('⚠️  .harness/ já existe neste projeto.')
     console.log('   Use --force para reinicializar (atenção: sobrescreve arquivos do scaffold).')
     console.log('   Para apenas regenerar adapters: harness sync\n')
-    process.exit(0)
+    return  // B3 — return em vez de process.exit()
   }
 
-  // 2. Copia o scaffold (nunca sobrescreve project-details.json se existir)
+  // 2. Copia o scaffold
   console.log('📁 Copiando scaffold...')
-  await cp(SCAFFOLD, HARNESS_DIR, {
+
+  // M2 — valida que o scaffold existe antes de tentar copiar
+  if (!(await fileExists(SCAFFOLD))) {
+    throw new Error(`Scaffold não encontrado em: ${SCAFFOLD}`)
+  }
+
+  await cp(SCAFFOLD, harnessDir(), {
     recursive: true,
     force,
-    filter: (src) => {
-      // Nunca sobrescreve project-details.json — é arquivo do usuário
-      if (src.endsWith('project-details.json')) return false
-      return true
-    },
+    filter: (src) => !src.endsWith('project-details.json'),
   })
   console.log('   ✅ Estrutura base criada\n')
 
   // 3. Detecta o projeto e gera project-details.json
-  const detailsPath = resolve(HARNESS_DIR, 'project-details.json')
+  const detailsPath = resolve(harnessDir(), 'project-details.json')
   const detailsExists = await fileExists(detailsPath)
 
   if (!detailsExists) {
@@ -46,13 +49,9 @@ export async function runInit(args: string[]): Promise<void> {
     await writeFile(detailsPath, JSON.stringify(details, null, 2), 'utf-8')
     console.log('   ✅ project-details.json gerado\n')
 
-    // 4. Patcha package.json
     await patchPackageJson()
-
-    // 5. Patcha .gitignore
     await patchGitignore()
 
-    // 6. Exibe hints e para para revisão
     console.log('─────────────────────────────────────────')
     console.log('⚠️  REVISE .harness/project-details.json antes de continuar:\n')
     reviewHints.forEach(hint => console.log(`   • ${hint}`))
@@ -68,7 +67,7 @@ export async function runInit(args: string[]): Promise<void> {
 }
 
 async function patchPackageJson(): Promise<void> {
-  const pkgPath = resolve(ROOT, 'package.json')
+  const pkgPath = resolve(getRoot(), 'package.json')
 
   let pkg: Record<string, unknown>
   try {
@@ -83,8 +82,9 @@ async function patchPackageJson(): Promise<void> {
 
   let changed = false
 
-  if (!('@ai-harness/sync' in devDeps)) {
-    devDeps['@ai-harness/sync'] = 'latest'
+  // B1 — o pacote correto é @ai-harness/cli, não @ai-harness/sync
+  if (!('@ai-harness/cli' in devDeps) && !('@ai-harness/sync' in devDeps)) {
+    devDeps['@ai-harness/cli'] = 'latest'
     pkg.devDependencies = devDeps
     changed = true
   }
@@ -95,8 +95,9 @@ async function patchPackageJson(): Promise<void> {
     changed = true
   }
 
+  // B2 — comando correto é `harness init`, não `harness sync --init`
   if (!scripts['harness:init']) {
-    scripts['harness:init'] = 'harness sync --init'
+    scripts['harness:init'] = 'harness init'
     pkg.scripts = scripts
     changed = true
   }
@@ -110,7 +111,7 @@ async function patchPackageJson(): Promise<void> {
 }
 
 async function patchGitignore(): Promise<void> {
-  const gitignorePath = resolve(ROOT, '.gitignore')
+  const gitignorePath = resolve(getRoot(), '.gitignore')
 
   const block = `
 # AI Harness — gerado pelo sync
