@@ -1,167 +1,167 @@
-# How It Works
+# Como Funciona
 
-## The core idea
+## A ideia central
 
-The AI Harness is a folder (`.harness/`) that lives inside your project and acts as its **external memory**. It holds everything an AI needs to work well in your specific codebase — rules, domain knowledge, known mistakes, architectural decisions, and domain-specific skills.
+O AI Harness é uma pasta (`.harness/`) que vive dentro do seu projeto e funciona como sua **memória externalizada**. Ela contém tudo que uma IA precisa para trabalhar bem no seu codebase específico — regras, vocabulário do domínio, erros conhecidos, decisões arquiteturais e skills especializadas.
 
-When you open a session, the AI reads these files. Instead of starting from zero, it starts from everything your project has learned.
+Quando você abre uma sessão, a IA lê esses arquivos. Em vez de começar do zero, ela começa a partir de tudo que o projeto já aprendeu.
 
-It's not a framework that wraps AI calls. It has no runtime. It's structured files that any AI tool can read — because reading files is something every AI tool already does.
+Não é um framework que envolve chamadas de IA. Não tem runtime próprio. São arquivos estruturados que qualquer ferramenta de IA consegue ler — porque ler arquivos é algo que toda ferramenta de IA já faz.
 
 ---
 
-## The pieces
+## As peças
 
 ```
 .harness/
-├── core/          ← what the AI always loads
-├── skills/        ← specialized knowledge per domain
-├── hooks/         ← behavior at specific moments
+├── core/          ← o que a IA sempre carrega
+├── skills/        ← conhecimento especializado por domínio
+├── hooks/         ← comportamento em momentos específicos
 ├── commands/      ← slash commands (/review, /fix, /test...)
-├── memory/        ← what the project has learned over time
-└── evolution/     ← proposed improvements awaiting approval
+├── memory/        ← o que o projeto aprendeu ao longo do tempo
+└── evolution/     ← melhorias propostas aguardando aprovação
 ```
 
-### `core/` — permanent context
+### `core/` — contexto permanente
 
-Three files the AI loads in every session:
+Três arquivos que a IA carrega em toda sessão:
 
-- **`rules.md`** — non-negotiable constraints. "Never use `any` to paper over a type error." "Always run typecheck before considering a task done." "Never modify migrations without checking `memory/decisions.md`."
-- **`glossary.md`** — the project's vocabulary. What `Customer` means here vs `User`. What `holerite` is. Ensures the AI uses the right names consistently.
-- **`context.md`** — generated automatically by `harness sync`. Stack, structure, entry points, critical files. Never written by hand.
+- **`rules.md`** — restrições inegociáveis. "Nunca usar `any` para tapar erro de tipo." "Sempre rodar typecheck antes de considerar uma task pronta." "Nunca modificar migrations sem verificar `memory/decisions.md`."
+- **`glossary.md`** — o vocabulário do projeto. O que `Cliente` significa aqui vs `Usuário`. O que é `holerite`. Garante que a IA use os nomes certos de forma consistente.
+- **`context.md`** — gerado automaticamente pelo `harness sync`. Stack, estrutura, entry points, arquivos críticos. Nunca escrito à mão.
 
-### `skills/` — domain knowledge
+### `skills/` — conhecimento de domínio
 
-Skills are the specialized knowledge for specific parts of your project. A payroll skill knows the INSS progressive table, the `taxSnapshot` pattern, which package is canonical. A NFS-e skill knows the digital certificate encryption requirements.
+Skills são o conhecimento especializado para partes específicas do projeto. Uma skill de folha de pagamento sabe sobre a tabela progressiva do INSS, o padrão `taxSnapshot`, qual pacote é o canônico. Uma skill de NFS-e sabe sobre os requisitos de criptografia do certificado digital.
 
-The AI loads only the relevant skill for the current task — not everything at once. Each skill declares its context budget (estimated tokens), which commands require it, and which other skills complement it.
+A IA carrega apenas a skill relevante para a task atual — não tudo de uma vez. Cada skill declara seu budget de contexto (tokens estimados), quais commands a requerem e quais outras skills a complementam.
 
-Every skill has `examples/good/` and `examples/bad/` — concrete code showing the right pattern and the anti-pattern, with comments explaining why.
+Toda skill tem `examples/good/` e `examples/bad/` — código concreto mostrando o padrão correto e o anti-padrão, com comentários explicando o porquê.
 
-### `hooks/` — behavioral guardrails
+### `hooks/` — guardrails de comportamento
 
-Hooks are instructions the AI follows at specific moments. They don't contain domain knowledge — they enforce consistent behavior.
+Hooks são instruções que a IA segue em momentos específicos. Não contêm conhecimento de domínio — garantem comportamento consistente.
 
-| Hook | When | Blocks? |
-|------|------|---------|
-| `pre-task` | Before any task | ✅ |
-| `post-task` | After completing a task | ❌ |
-| `on-error` | When something fails | ✅ |
-| `on-ambiguity` | When input is unclear | ✅ |
-| `on-skill-load` | Before loading a skill | ❌ |
-| `on-command` | Before running a slash command | ✅ |
+| Hook | Quando | Bloqueia? |
+|------|--------|-----------|
+| `pre-task` | Antes de qualquer task | ✅ |
+| `post-task` | Após concluir uma task | ❌ |
+| `on-error` | Quando algo falha | ✅ |
+| `on-ambiguity` | Quando o input é ambíguo | ✅ |
+| `on-skill-load` | Antes de carregar uma skill | ❌ |
+| `on-command` | Antes de executar slash command | ✅ |
 
-`pre-task` is the most important: is the scope clear? is the right skill loaded? has `memory/mistakes.md` been checked? what's the plan before acting?
+O `pre-task` é o mais importante: o escopo está claro? a skill certa foi carregada? `memory/mistakes.md` foi consultado? qual é o plano antes de agir?
 
-`post-task` is where value accumulates: did something new get learned? should a mistake be documented? should a pattern be captured? If yes — suggest `/harness-update`.
+O `post-task` é onde o valor se acumula: algo novo foi aprendido? um erro deve ser documentado? um padrão deve ser capturado? Se sim — sugere `/harness-update`.
 
 ### `commands/` — slash commands
 
-Commands like `/review`, `/fix`, `/refactor`, `/test`, `/audit`, `/harness-update` are defined once in `commands/shared/` as plain Markdown with frontmatter. Each defines: inputs, steps the AI should follow, expected output format, and which project commands to run (`{{commands.typecheck}}`).
+Commands como `/review`, `/fix`, `/refactor`, `/test`, `/audit`, `/harness-update` são definidos uma vez em `commands/shared/` como Markdown simples com frontmatter. Cada um define: inputs, steps que a IA deve seguir, formato de output esperado e quais comandos do projeto rodar (`{{commands.typecheck}}`).
 
-`harness sync` reads these and generates the right format for each active tool:
+O `harness sync` lê esses arquivos e gera o formato certo para cada tool ativa:
 
 - **Cursor** → `.cursor/rules/cmd-review.mdc`
-- **Claude Code** → section in `CLAUDE.md`
-- **Copilot** → summary in `copilot-instructions.md`
+- **Claude Code** → seção no `CLAUDE.md`
+- **Copilot** → resumo no `copilot-instructions.md`
 
-Commands are only generated for tools that support them — Copilot doesn't get slash command definitions, for instance.
+Commands são gerados apenas para tools que os suportam — o Copilot não recebe definições de slash command, por exemplo.
 
-### `memory/` — accumulated knowledge
+### `memory/` — conhecimento acumulado
 
-This is where the harness compounds in value over time.
+É aqui que o harness cresce em valor ao longo do tempo.
 
-- **`mistakes.md`** — errors that happened and how to fix them. The INSS flat-rate bug. The missing `taxSnapshot`. The migration process that breaks under concurrency. Documented once, prevented forever.
-- **`decisions.md`** — architectural decision records. Why the tax calculator lives in a shared package. Why digital certificates are encrypted with AES-256-GCM. Why the monorepo structure was chosen. Context that prevents the AI from "improving" things that were deliberately designed that way.
-- **`patterns.md`** — what works well. How services are structured here. What a good test looks like in this codebase.
+- **`mistakes.md`** — erros que aconteceram e como resolver. O bug da alíquota flat de INSS. O `taxSnapshot` ausente. O processo de migration que quebra sob concorrência. Documentado uma vez, prevenido para sempre.
+- **`decisions.md`** — registros de decisão arquitetural. Por que o cálculo de impostos fica num pacote compartilhado. Por que certificados digitais são criptografados com AES-256-GCM. Por que a estrutura de monorepo foi escolhida. Contexto que evita que a IA "melhore" coisas que foram deliberadamente projetadas de determinada forma.
+- **`patterns.md`** — o que funciona bem. Como services são estruturados aqui. Como um bom teste se parece neste codebase.
 
-### `evolution/` — supervised self-improvement
+### `evolution/` — auto-melhoria supervisionada
 
-The harness improves over time, but never automatically. Proposed changes go to `evolution/proposed/` as diffs, wait for explicit human approval, then get applied. This prevents the harness from editing itself unexpectedly.
+O harness melhora ao longo do tempo, mas nunca automaticamente. Mudanças propostas vão para `evolution/proposed/` como diffs, aguardam aprovação humana explícita e só então são aplicadas. Isso evita que o harness se edite de surpresa.
 
 ---
 
-## The CLI
+## O CLI
 
-Two commands. That's it.
+Dois comandos. Só isso.
 
 ```bash
-# First time — bootstraps .harness/ in your project
+# Primeira vez — bootstrapa .harness/ no seu projeto
 npx @ai-harness/cli init
 
-# Daily use — regenerates adapters for active tools
+# Uso diário — regenera os adapters para as tools ativas
 harness sync
 ```
 
-**`init`** inspects your project automatically:
-- Reads `package.json` for name, scripts, dependencies
-- Detects monorepo via `pnpm-workspace.yaml`, `workspaces`, or `turbo.json`
-- Infers stack from installed packages (NestJS, Next.js, Prisma, etc.)
-- Identifies package manager from lockfile
-- Finds entry points (`src/main.ts`, `app/layout.tsx`, etc.)
+**`init`** inspeciona seu projeto automaticamente:
+- Lê `package.json` para nome, scripts e dependências
+- Detecta monorepo via `pnpm-workspace.yaml`, `workspaces` ou `turbo.json`
+- Infere stack a partir dos pacotes instalados (NestJS, Next.js, Prisma, etc.)
+- Identifica package manager pelo lockfile
+- Encontra entry points (`src/main.ts`, `app/layout.tsx`, etc.)
 
-It generates a `project-details.json`, then **stops and asks you to review** before doing anything else. No silent assumptions.
+Gera um `project-details.json` preenchido e **para para pedir revisão** antes de fazer qualquer outra coisa. Sem suposições silenciosas.
 
-**`sync`** reads `harness.config.json` and `project-details.json`, resolves `{{placeholders}}` like `{{commands.typecheck}}` → `pnpm typecheck`, then writes the adapter files for each active tool.
+**`sync`** lê `harness.config.json` e `project-details.json`, resolve `{{placeholders}}` como `{{commands.typecheck}}` → `pnpm typecheck` e escreve os arquivos de adapter para cada tool ativa.
 
 ---
 
-## A typical session
+## Uma sessão típica
 
 ```
-You open Cursor
+Você abre o Cursor
         │
         ▼
-AI loads harness-main.mdc (alwaysApply: true)
-Reads: core/rules.md + core/glossary.md
+IA carrega harness-main.mdc (alwaysApply: true)
+Lê: core/rules.md + core/glossary.md
         │
         ▼
-You describe a task
+Você descreve uma task
         │
         ▼
-AI follows pre-task.md:
-  ├── Scope clear? If not → on-ambiguity.md
-  ├── Identifies domain → loads relevant skill
-  ├── Checks memory/mistakes.md for known traps
-  ├── Checks memory/decisions.md for relevant ADRs
-  └── Declares plan before acting
+IA segue pre-task.md:
+  ├── Escopo claro? Se não → on-ambiguity.md
+  ├── Identifica domínio → carrega skill relevante
+  ├── Consulta memory/mistakes.md para armadilhas conhecidas
+  ├── Consulta memory/decisions.md para ADRs relevantes
+  └── Declara plano antes de agir
         │
         ▼
-Execution
-  └── Error? → on-error.md
-              ├── Classify: syntactic / logical / environmental
-              ├── Check memory/mistakes.md — seen before?
-              └── Max 2 attempts same approach, then escalate
+Execução
+  └── Erro? → on-error.md
+              ├── Classifica: sintático / lógico / ambiental
+              ├── Verifica memory/mistakes.md — já visto antes?
+              └── Máx 2 tentativas mesma abordagem, depois escala
         │
         ▼
-AI follows post-task.md:
-  ├── Runs typecheck (mandatory) + lint + test if relevant
-  ├── Captures new mistakes, patterns, decisions
-  └── Suggests /harness-update if something was learned
+IA segue post-task.md:
+  ├── Roda typecheck (obrigatório) + lint + test se relevante
+  ├── Captura erros, padrões e decisões novas
+  └── Sugere /harness-update se algo foi aprendido
         │
         ▼
-You review proposed changes, approve what makes sense
-harness sync regenerates adapters
+Você revisa as mudanças propostas e aprova o que faz sentido
+harness sync regenera os adapters
 ```
 
 ---
 
-## How knowledge accumulates
+## Como o conhecimento se acumula
 
-Month 1: mostly empty memory files, generic skills.
+**Mês 1:** memory files quase vazios, skills genéricas.
 
-Month 3: `memory/mistakes.md` has 8 entries — real bugs from your actual codebase. Skills have been refined with project-specific examples. The AI stops suggesting the anti-patterns your team eliminated.
+**Mês 3:** `memory/mistakes.md` tem 8 entradas — bugs reais do seu codebase. Skills foram refinadas com exemplos específicos do projeto. A IA para de sugerir os anti-padrões que o time eliminou.
 
-Month 6: A new developer joins. Their AI tool reads the harness and immediately knows the domain vocabulary, the architectural decisions, the patterns that work here. The onboarding context that usually lives in people's heads is now structured and accessible.
+**Mês 6:** Um dev novo entra no projeto. Sua ferramenta de IA lê o harness e imediatamente sabe o vocabulário do domínio, as decisões arquiteturais, os padrões que funcionam aqui. O contexto de onboarding que normalmente vive nas cabeças das pessoas está agora estruturado e acessível.
 
-This is the core value proposition: **the longer a project uses the harness, the better the AI gets at working on that project.**
+Essa é a proposta de valor central: **quanto mais tempo um projeto usa o harness, melhor a IA fica em trabalhar naquele projeto.**
 
 ---
 
-## What it is not
+## O que não é
 
-- Not an AI wrapper or orchestrator — it doesn't make API calls
-- Not a prompt injection layer — it's structured files, not hidden instructions
-- Not tied to any single AI provider — Cursor, Claude Code, Copilot, anything that reads files
-- Not a replacement for good code, tests, or documentation — it augments them
-- Not autonomous — the AI suggests, humans approve
+- Não é um wrapper ou orquestrador de IA — não faz chamadas de API
+- Não é uma camada de injeção de prompt — são arquivos estruturados, não instruções ocultas
+- Não está preso a nenhum provedor de IA — Cursor, Claude Code, Copilot, qualquer ferramenta que lê arquivos
+- Não substitui bom código, testes ou documentação — os complementa
+- Não é autônomo — a IA sugere, humanos aprovam

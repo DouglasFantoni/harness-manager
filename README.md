@@ -1,9 +1,9 @@
 # AI Harness Framework
 
-> A living context framework that makes AI tools progressively smarter about your specific project — across sessions, across tools, across time.
+> Um framework de contexto vivo que torna ferramentas de IA progressivamente mais inteligentes sobre o seu projeto específico — entre sessões, entre ferramentas, ao longo do tempo.
 
-**→ [Why this exists](./PROBLEM.md)** — the problem we're solving and how to evaluate if we're solving it  
-**→ [How it works](./HOW_IT_WORKS.md)** — a full walkthrough of the framework, the CLI, and a typical session
+**→ [Por que isso existe](./PROBLEM.md)** — o problema que estamos resolvendo e como avaliar se estamos resolvendo de verdade  
+**→ [Como funciona](./HOW_IT_WORKS.md)** — um walkthrough completo do framework, do CLI e de uma sessão típica
 
 ---
 

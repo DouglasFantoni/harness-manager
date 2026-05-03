@@ -1,65 +1,65 @@
-# The Problem
+# O Problema
 
-## Every AI session starts from zero
+## Toda sessão de IA começa do zero
 
-When you open a new session with an AI tool — Cursor, Claude Code, Copilot — it knows nothing about your project. You explain the same context over and over. It makes the same mistakes. It uses the wrong names for domain entities. It ignores architectural decisions you've already made and documented elsewhere.
+Quando você abre uma nova sessão com uma ferramenta de IA — Cursor, Claude Code, Copilot — ela não sabe nada sobre o seu projeto. Você explica o mesmo contexto repetidamente. Ela comete os mesmos erros. Usa nomes errados para entidades do domínio. Ignora decisões arquiteturais que você já tomou e documentou em outro lugar.
 
-This isn't a bug. It's how these tools work. But it compounds over time in ways that are easy to underestimate.
-
----
-
-## What this actually costs
-
-**Repeated mistakes.** The AI suggests using a flat INSS tax rate instead of the progressive table — the same mistake that took you two hours to debug three months ago. There's no institutional memory, so it happens again.
-
-**Inconsistent vocabulary.** One session calls it `Customer`, the next `Client`, the next `User`. The codebase slowly accumulates naming inconsistencies that make it harder for humans and AIs alike to reason about the domain.
-
-**Ignored decisions.** Your team decided to never use `any` to paper over type errors, always run `typecheck` before considering a task done, and never modify migrations without checking the ADR log. The AI doesn't know any of this. Every session starts with a blank slate.
-
-**Context tax.** You spend the first part of every session re-explaining what the project is, what stack it uses, what patterns are established, what not to do. This is time and tokens that should go toward actual work.
-
-**Knowledge that lives only in heads.** Senior devs accumulate deep understanding of the codebase — the traps, the patterns, the reasoning behind decisions. This knowledge doesn't transfer automatically. A new dev, or a new AI session, starts from scratch.
+Isso não é um bug. É como essas ferramentas funcionam. Mas o custo se acumula ao longo do tempo de formas fáceis de subestimar.
 
 ---
 
-## The deeper issue
+## O que isso custa na prática
 
-The problem isn't just that AI tools lack memory. It's that **projects lack a structured way to accumulate and communicate their own context** — to humans and to AIs.
+**Erros repetidos.** A IA sugere usar alíquota flat de INSS ao invés da tabela progressiva — o mesmo erro que levou duas horas para depurar três meses atrás. Não há memória institucional, então acontece de novo.
 
-Teams write READMEs, but they go stale. They write Confluence pages, but nobody reads them before asking the AI. They have tribal knowledge, but it lives in Slack threads and people's heads.
+**Vocabulário inconsistente.** Uma sessão chama de `Customer`, a próxima de `Client`, a próxima de `User`. O codebase acumula lentamente inconsistências de nomenclatura que dificultam o raciocínio tanto para humanos quanto para IAs.
 
-What's missing is a living, structured, project-specific knowledge layer that:
+**Decisões ignoradas.** O time decidiu nunca usar `any` para tapar erros de tipo, sempre rodar `typecheck` antes de considerar uma task concluída, e nunca modificar migrations sem verificar o log de ADRs. A IA não sabe nada disso. Cada sessão começa do zero.
 
-- Is maintained alongside the code, not separately
-- Grows more useful over time as the project evolves
-- Is formatted in a way that AI tools can actually use
-- Distinguishes between what is always true (rules), what was learned (mistakes, patterns), and what was decided (architecture)
-- Is owned by the team, not by any single AI provider
+**Taxa de contexto.** Você gasta o início de cada sessão re-explicando o que é o projeto, qual stack usa, quais padrões estão estabelecidos, o que não fazer. Isso é tempo e tokens que deveriam ir para o trabalho em si.
+
+**Conhecimento que vive só em cabeças.** Devs seniores acumulam entendimento profundo do codebase — as armadilhas, os padrões, o raciocínio por trás das decisões. Esse conhecimento não se transfere automaticamente. Um dev novo, ou uma nova sessão de IA, começa do zero.
 
 ---
 
-## What good looks like
+## O problema mais profundo
 
-A developer joins a project six months in. They open their AI tool. Before writing a single line of code, the AI already knows:
+O problema não é apenas que ferramentas de IA não têm memória. É que **projetos não têm uma forma estruturada de acumular e comunicar seu próprio contexto** — para humanos e para IAs.
 
-- The domain vocabulary — what a `Customer` is vs a `User`, what `holerite` means in this context
-- The architectural decisions — why the tax calculation lives in a shared package, why snapshots are used for fiscal data
-- The known traps — the INSS flat-rate mistake, the missing `taxSnapshot` anti-pattern, the migration process
-- The established patterns — how services are structured, how errors are handled, what a good test looks like here
-- The project conventions — branch naming, commit format, which commands to run before considering something done
+Times escrevem READMEs, mas ficam desatualizados. Escrevem páginas no Confluence, mas ninguém lê antes de perguntar para a IA. Têm conhecimento tribal, mas ele vive em threads do Slack e nas cabeças das pessoas.
 
-The AI doesn't just write code. It writes *this project's* code.
+O que falta é uma camada de conhecimento viva, estruturada e específica do projeto que:
+
+- Seja mantida junto com o código, não separadamente
+- Fique mais útil ao longo do tempo conforme o projeto evolui
+- Esteja formatada de um jeito que ferramentas de IA consigam usar de verdade
+- Diferencie o que é sempre verdade (regras), o que foi aprendido (erros, padrões) e o que foi decidido (arquitetura)
+- Pertença ao time, não a nenhum provedor de IA específico
 
 ---
 
-## The test
+## Como deveria ser
 
-This file exists to be honest about what we're trying to solve. Every feature decision in the AI Harness should be evaluated against these questions:
+Um desenvolvedor entra num projeto seis meses depois do início. Ele abre sua ferramenta de IA. Antes de escrever uma linha de código, a IA já sabe:
 
-1. Does this reduce the context tax per session?
-2. Does this prevent repeated mistakes?
-3. Does this make project knowledge accumulate rather than evaporate?
-4. Does this work across AI tools, not just one?
-5. Does this stay useful as the project grows and changes?
+- O vocabulário do domínio — o que `Cliente` é vs `Usuário`, o que `holerite` significa neste contexto
+- As decisões arquiteturais — por que o cálculo de impostos fica num pacote compartilhado, por que snapshots são usados para dados fiscais
+- As armadilhas conhecidas — o bug da alíquota flat de INSS, o anti-padrão de `taxSnapshot` ausente, o processo de migrations
+- Os padrões estabelecidos — como services são estruturados, como erros são tratados, como um bom teste se parece aqui
+- As convenções do projeto — nomenclatura de branches, formato de commit, quais comandos rodar antes de considerar algo pronto
 
-If a feature doesn't move at least one of these needles, it probably doesn't belong here.
+A IA não só escreve código. Ela escreve *o código deste projeto*.
+
+---
+
+## O teste
+
+Este arquivo existe para ser honesto sobre o que estamos tentando resolver. Toda decisão de feature do AI Harness deve ser avaliada contra estas perguntas:
+
+1. Isso reduz a taxa de contexto por sessão?
+2. Isso previne erros repetidos?
+3. Isso faz o conhecimento do projeto acumular ao invés de evaporar?
+4. Isso funciona em múltiplas ferramentas de IA, não só uma?
+5. Isso continua útil conforme o projeto cresce e muda?
+
+Se uma feature não move pelo menos um desses ponteiros, ela provavelmente não pertence aqui.
