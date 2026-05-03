@@ -12,6 +12,7 @@
 | `/fix` | Corrige problema ou erro ativo | ✅ | ✅ | ✅ | `shared/fix.md` |
 | `/audit` | Auditoria de segurança e performance | ✅ | ✅ | ❌ | `shared/audit.md` |
 | `/harness-update` | Evolui o harness (requer aprovação) | ✅ | ✅ | ❌ | `shared/harness-update.md` |
+| `/setup` | Popula o harness com IA como orquestrador | ✅ | ✅ | ❌ | `shared/setup.md` |
 
 ## Regra do sync
 

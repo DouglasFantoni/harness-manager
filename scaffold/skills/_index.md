@@ -6,6 +6,7 @@
 | Skill | Domínio | Peso ~ | Expõe Command | Carregada por |
 |-------|---------|--------|---------------|---------------|
 | _self-update | harness | ~400 | `/harness-update` | — |
+| harness-orchestrator | harness | ~600 | `/setup` | — |
 
 <!-- Adicione suas skills abaixo. Exemplo:
 | minha-skill | backend | ~800 | — | /review, /audit |
