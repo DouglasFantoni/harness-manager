@@ -160,8 +160,46 @@ Essa é a proposta de valor central: **quanto mais tempo um projeto usa o harnes
 
 ## O que não é
 
-- Não é um wrapper ou orquestrador de IA — não faz chamadas de API
-- Não é uma camada de injeção de prompt — são arquivos estruturados, não instruções ocultas
-- Não está preso a nenhum provedor de IA — Cursor, Claude Code, Copilot, qualquer ferramenta que lê arquivos
-- Não substitui bom código, testes ou documentação — os complementa
-- Não é autônomo — a IA sugere, humanos aprovam
+**Não integra APIs de IA.** O harness não faz chamadas para OpenAI, Anthropic, ou qualquer outro provedor. Ele não tem chave de API, não tem custo de uso de modelo, não depende de nenhum serviço externo estar disponível. Essa é uma decisão deliberada — ver seção abaixo.
+
+**Não é um wrapper ou orquestrador.** Não intercepta as chamadas que o Cursor ou Claude Code fazem. Não tem runtime próprio que fica em execução.
+
+**Não é injeção de prompt oculta.** São arquivos Markdown que você pode ler, editar e versionar. Nada acontece sem que você saiba.
+
+**Não está preso a nenhum provedor.** Cursor, Claude Code, Copilot, Zed, Windsurf — qualquer ferramenta que lê arquivos do projeto funciona com o harness.
+
+**Não substitui bom código, testes ou documentação.** Complementa — não compensa dívida técnica.
+
+**Não é autônomo.** A IA sugere, humanos aprovam. O harness nunca se edita sozinho.
+
+---
+
+## Por que não integramos APIs de IA
+
+Algumas tarefas do harness se beneficiariam de IA — enriquecer o `project-details.json`,
+gerar um glossário inicial, extrair armadilhas do histórico de commits.
+
+Optamos por não integrar APIs diretamente por algumas razões:
+
+- **Agnóstico de modelo**: Você usa o modelo que já tem — Claude, GPT-4, Gemini, o que for. O harness não força nenhuma escolha.
+- **Sem chaves de API**: Nenhuma configuração de credenciais, nenhum custo surpresa, nenhuma dependência de serviço externo.
+- **Você controla o contexto**: Você decide o que a IA vê. Nenhum arquivo é enviado automaticamente para nenhum servidor.
+- **Sem lock-in**: Se um modelo melhor aparecer amanhã, você simplesmente usa ele.
+
+Em vez de chamadas de API, o harness fornece **prompts prontos** que você copia e cola na IA que já está usando.
+
+---
+
+## Prompts disponíveis
+
+A pasta [`prompts/`](./prompts/) contém prompts para as tarefas que se beneficiam de IA:
+
+| Prompt | O que faz |
+|--------|-----------|
+| [`init-enrich.md`](./prompts/init-enrich.md) | Enriquece o `project-details.json` após o `init` |
+| [`skill-create.md`](./prompts/skill-create.md) | Cria uma nova skill a partir dos arquivos do domínio |
+| [`glossary-generate.md`](./prompts/glossary-generate.md) | Gera o glossário inicial a partir do código |
+| [`rules-generate.md`](./prompts/rules-generate.md) | Gera as regras iniciais a partir das convenções do projeto |
+| [`mistakes-extract.md`](./prompts/mistakes-extract.md) | Extrai armadilhas do histórico de commits e PRs |
+
+Cada prompt especifica exatamente qual contexto fornecer e o que fazer com o output.

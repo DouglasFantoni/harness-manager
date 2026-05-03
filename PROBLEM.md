@@ -52,6 +52,19 @@ A IA não só escreve código. Ela escreve *o código deste projeto*.
 
 ---
 
+## Como a IA entra sem entrar como dependência
+
+Algumas tarefas de setup do harness — como enriquecer a descrição do projeto,
+gerar um glossário inicial, ou extrair armadilhas do histórico — se beneficiam
+de análise semântica que o detector automático não consegue fazer.
+
+Em vez de integrar uma API de IA, o harness fornece **prompts prontos** em
+`prompts/` que você copia e cola na IA que já usa. Você controla o contexto
+que a IA vê, revisa o output antes de salvar, e não depende de nenhum
+provedor específico.
+
+---
+
 ## O teste
 
 Este arquivo existe para ser honesto sobre o que estamos tentando resolver. Toda decisão de feature do AI Harness deve ser avaliada contra estas perguntas:
