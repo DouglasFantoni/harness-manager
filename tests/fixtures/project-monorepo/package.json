@@ -1,17 +1,24 @@
 {
-  "name": "monorepo-app",
-  "description": "A monorepo with NestJS + Next.js",
+  "name": "my-monorepo",
+  "version": "0.0.0",
+  "description": "NestJS API + Next.js frontend monorepo",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "test:coverage": "turbo run test -- --coverage",
     "typecheck": "turbo run typecheck",
     "build": "turbo run build",
-    "dev": "turbo run dev"
+    "dev": "turbo run dev",
+    "clean": "turbo run clean"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
   }
 }
