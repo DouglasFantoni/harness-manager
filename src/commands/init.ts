@@ -55,8 +55,10 @@ export async function runInit(args: string[]): Promise<void> {
     console.log('─────────────────────────────────────────')
     console.log('⚠️  REVISE .harness/project-details.json antes de continuar:\n')
     reviewHints.forEach(hint => console.log(`   • ${hint}`))
+    console.log('\n💡  Use a IA para enriquecer o que o detector não conseguiu:')
+    console.log('   harness prompt init-enrich')
     console.log('\n   Quando estiver pronto:')
-    console.log('   pnpm harness:sync')
+    console.log('   harness sync')
     console.log('─────────────────────────────────────────\n')
   } else {
     console.log('ℹ️  project-details.json já existe — mantido sem alterações\n')

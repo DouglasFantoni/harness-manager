@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { runInit } from './commands/init.js'
 import { runSync } from './sync.js'
+import { runPrompt } from './commands/prompt.js'
 
 const [,, command, ...args] = process.argv
 
@@ -13,6 +14,9 @@ const USAGE = `
     harness sync --only cursor           Only generate for one tool
     harness sync --only claude-code
     harness sync --force-context         Force context.md regeneration
+
+    harness prompt <nome>                Exibe prompt pronto para copiar e colar na IA
+    harness prompt --list                Lista todos os prompts disponíveis
 `
 
 
@@ -33,6 +37,11 @@ async function main() {
 
   if (command === 'init') {
     await runInit(args)
+    return
+  }
+
+  if (command === 'prompt') {
+    await runPrompt(args)
     return
   }
 

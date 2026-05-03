@@ -47,6 +47,8 @@ export interface ProjectDetails {
     dev: string
     custom: Record<string, string>
   }
+  // Scripts do package.json do projeto (injetado pelo prompt command)
+  scripts?: Record<string, string>
   conventions: {
     branch_pattern: string
     commit_pattern: string
