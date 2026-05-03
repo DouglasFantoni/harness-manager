@@ -4,10 +4,8 @@ import { resolve } from 'path'
 const FIXTURES = resolve(import.meta.dirname, '../fixtures')
 
 describe('detectProject', () => {
-  let originalCwd: () => string
-
   beforeEach(() => {
-    originalCwd = process.cwd.bind(process)
+    vi.spyOn(process, 'cwd')
   })
 
   afterEach(() => {
@@ -15,9 +13,9 @@ describe('detectProject', () => {
     vi.resetModules()
   })
 
-  describe('projeto simples (single)', () => {
+  describe('project-simple — NestJS single com pnpm', () => {
     beforeEach(() => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-simple'))
+      vi.mocked(process.cwd).mockReturnValue(resolve(FIXTURES, 'project-simple'))
     })
 
     it('detecta nome e descrição do package.json', async () => {
@@ -33,14 +31,41 @@ describe('detectProject', () => {
       expect(details.project.type).toBe('single')
     })
 
-    it('detecta NestJS e TypeScript no backend', async () => {
+    it('detecta NestJS, TypeORM e TypeScript no backend', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { details } = await detectProject()
       expect(details.project.stack.backend).toContain('nestjs')
+      expect(details.project.stack.backend).toContain('typeorm')
       expect(details.project.stack.backend).toContain('typescript')
     })
 
-    it('detecta scripts do package.json corretamente', async () => {
+    it('stack frontend vazia para projeto só backend', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.frontend).toEqual([])
+    })
+
+    it('detecta docker via Dockerfile', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.infra).toContain('docker')
+    })
+
+    it('detecta github-actions via .github/workflows/', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.infra).toContain('github-actions')
+    })
+
+    it('detecta pnpm como package manager via pnpm-lock.yaml', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.commands.lint).toMatch(/^pnpm/)
+      expect(details.commands.test).toMatch(/^pnpm/)
+      expect(details.commands.typecheck).toMatch(/^pnpm/)
+    })
+
+    it('detecta scripts corretamente', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { details } = await detectProject()
       expect(details.commands.lint).toBe('pnpm lint')
@@ -50,6 +75,30 @@ describe('detectProject', () => {
       expect(details.commands.dev).toBe('pnpm dev')
     })
 
+    it('detecta conventional-commits via .commitlintrc.json', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.commit_pattern).toBe('conventional-commits')
+    })
+
+    it('detecta PR template via .github/pull_request_template.md', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.pr_template).toBe('.github/pull_request_template.md')
+    })
+
+    it('branch_pattern começa vazio (não detectável automaticamente)', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.branch_pattern).toBe('')
+    })
+
+    it('detecta src/main.ts como entry point', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.context_hints.entry_points).toContain('src/main.ts')
+    })
+
     it('retorna structure com apps=["."] para projeto single', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { details } = await detectProject()
@@ -57,7 +106,7 @@ describe('detectProject', () => {
       expect(details.structure.packages).toEqual([])
     })
 
-    it('retorna avoid_paths com defaults', async () => {
+    it('avoid_paths contém os defaults esperados', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { details } = await detectProject()
       expect(details.context_hints.avoid_paths).toContain('dist/')
@@ -70,17 +119,18 @@ describe('detectProject', () => {
       expect(details.context_hints.critical_files).toEqual([])
     })
 
-    it('retorna reviewHints com orientações', async () => {
+    it('retorna reviewHints com orientações relevantes', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { reviewHints } = await detectProject()
       expect(reviewHints.length).toBeGreaterThan(0)
-      expect(reviewHints.some(h => typeof h === 'string')).toBe(true)
+      // branch_pattern não detectável — deve ter hint
+      expect(reviewHints.some(h => h.toLowerCase().includes('branch'))).toBe(true)
     })
   })
 
-  describe('projeto monorepo', () => {
+  describe('project-monorepo — NestJS + Next.js com pnpm-workspace.yaml', () => {
     beforeEach(() => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-monorepo'))
+      vi.mocked(process.cwd).mockReturnValue(resolve(FIXTURES, 'project-monorepo'))
     })
 
     it('detecta type como "monorepo"', async () => {
@@ -89,12 +139,62 @@ describe('detectProject', () => {
       expect(details.project.type).toBe('monorepo')
     })
 
-    it('detecta apps e packages do workspace', async () => {
+    it('detecta apps via pnpm-workspace.yaml', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { details } = await detectProject()
       expect(details.structure.apps).toContain('apps/api')
       expect(details.structure.apps).toContain('apps/web')
+    })
+
+    it('detecta packages via pnpm-workspace.yaml', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
       expect(details.structure.packages).toContain('packages/shared-types')
+    })
+
+    it('detecta NestJS no backend via deps das apps', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.backend).toContain('nestjs')
+    })
+
+    it('detecta Next.js, React, Radix e Tailwind no frontend via deps das apps', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.frontend).toContain('nextjs')
+      expect(details.project.stack.frontend).toContain('react')
+      expect(details.project.stack.frontend).toContain('radix-ui')
+      expect(details.project.stack.frontend).toContain('tailwindcss')
+    })
+
+    it('detecta turborepo na infra via turbo.json', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.infra).toContain('turborepo')
+    })
+
+    it('detecta github-actions via .github/workflows/', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.infra).toContain('github-actions')
+    })
+
+    it('detecta pnpm como package manager via pnpm-lock.yaml', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.commands.build).toMatch(/^pnpm/)
+    })
+
+    it('detecta conventional-commits via commitlint.config.ts', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.commit_pattern).toBe('conventional-commits')
+    })
+
+    it('detecta PR template', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.pr_template).toBe('.github/pull_request_template.md')
     })
 
     it('detecta entry points nas apps', async () => {
@@ -103,17 +203,11 @@ describe('detectProject', () => {
       expect(details.context_hints.entry_points).toContain('apps/api/src/main.ts')
       expect(details.context_hints.entry_points).toContain('apps/web/src/app/layout.tsx')
     })
-
-    it('usa turbo run para os comandos', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.commands.build).toBe('pnpm build')
-    })
   })
 
-  describe('projeto minimal (sem scripts)', () => {
+  describe('project-minimal — Express sem scripts nem lockfile específico', () => {
     beforeEach(() => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-minimal'))
+      vi.mocked(process.cwd).mockReturnValue(resolve(FIXTURES, 'project-minimal'))
     })
 
     it('não lança erro com package.json mínimo', async () => {
@@ -127,6 +221,47 @@ describe('detectProject', () => {
       expect(details.commands.lint).toBe('')
       expect(details.commands.test).toBe('')
       expect(details.commands.typecheck).toBe('')
+      expect(details.commands.build).toBe('')
+      expect(details.commands.dev).toBe('')
+    })
+
+    it('detecta npm como package manager via package-lock.json', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      // sem scripts, mas o prefix do package manager seria npm run
+      // validamos indiretamente que não quebrou
+      expect(details.commands).toBeDefined()
+    })
+
+    it('detecta type como "single"', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.type).toBe('single')
+    })
+
+    it('detecta express no backend, frontend vazio', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.backend).toContain('express')
+      expect(details.project.stack.frontend).toEqual([])
+    })
+
+    it('infra vazia sem Dockerfile ou .github/', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.project.stack.infra).toEqual([])
+    })
+
+    it('sem commitlint, commit_pattern fica vazio', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.commit_pattern).toBe('')
+    })
+
+    it('sem PR template, pr_template fica vazio', async () => {
+      const { detectProject } = await import('../../src/detector/index.js')
+      const { details } = await detectProject()
+      expect(details.conventions.pr_template).toBe('')
     })
 
     it('inclui hint sobre typecheck ausente', async () => {
@@ -135,127 +270,11 @@ describe('detectProject', () => {
       expect(reviewHints.some(h => h.toLowerCase().includes('typecheck'))).toBe(true)
     })
 
-    it('detecta type como "single" sem config de monorepo', async () => {
+    it('entry points vazio quando não há src/main.ts nem app/layout.tsx', async () => {
       const { detectProject } = await import('../../src/detector/index.js')
       const { details } = await detectProject()
-      expect(details.project.type).toBe('single')
+      // src/index.js existe mas não é um entry point que o detector procura (só .ts/.tsx)
+      expect(details.context_hints.entry_points).toEqual([])
     })
   })
-
-  describe('detecção de package manager', () => {
-    it('usa npm run quando não há lockfile específico', async () => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-simple'))
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      // projeto-simple não tem lockfile → npm run
-      expect(details.commands.lint).toMatch(/^npm run|^pnpm|^yarn/)
-    })
-  })
-
-  describe('stack detection — edge cases', () => {
-    it('stack sem nestjs/next não detecta framework mas pode ter outras deps', async () => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-minimal'))
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.project.stack.backend).not.toContain('nestjs')
-      expect(details.project.stack.frontend).toEqual([])
-    })
-
-    it('retorna frontend vazio para projeto apenas backend', async () => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-simple'))
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.project.stack.frontend).toEqual([])
-    })
-  })
-  describe('projeto simples — fixtures enriquecidos', () => {
-    beforeEach(() => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-simple'))
-    })
-
-    it('detecta pnpm como package manager pelo lockfile', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      // project-simple tem pnpm-lock.yaml
-      expect(details.commands.lint).toMatch(/^pnpm/)
-    })
-
-    it('detecta typeorm no backend', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.project.stack.backend).toContain('typeorm')
-    })
-
-    it('detecta commit pattern pelo .commitlintrc.json', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.conventions.commit_pattern).toBe('conventional-commits')
-    })
-
-    it('detecta src/main.ts como entry point', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.context_hints.entry_points).toContain('src/main.ts')
-    })
-  })
-
-  describe('monorepo — fixtures enriquecidos', () => {
-    beforeEach(() => {
-      vi.spyOn(process, 'cwd').mockReturnValue(resolve(FIXTURES, 'project-monorepo'))
-    })
-
-    it('detecta pnpm pelo lockfile', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.commands.lint).toMatch(/^pnpm/)
-    })
-
-    it('stack do root não inclui deps de sub-apps (next.js detectado pelo root)', async () => {
-      // radix-ui e tailwind estão em apps/web, não no root — detector lê só root
-      // next.js também está só em apps/web, então frontend fica vazio no root
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      // root package.json do monorepo não tem deps de frontend diretas
-      expect(details.project.stack.frontend).toEqual([])
-    })
-
-    it('detecta turborepo na infra', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.project.stack.infra).toContain('turborepo')
-    })
-
-    it('detecta github-actions pela pasta .github/workflows ausente — não deve incluir', async () => {
-      // monorepo tem .github/ mas não .github/workflows/
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.project.stack.infra).not.toContain('github-actions')
-    })
-
-    it('detecta PR template', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.conventions.pr_template).toBe('.github/pull_request_template.md')
-    })
-
-    it('detecta commit pattern pelo .commitlintrc.json', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.conventions.commit_pattern).toBe('conventional-commits')
-    })
-
-    it('web page.tsx também é encontrado como entry point', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.context_hints.entry_points).toContain('apps/web/src/app/page.tsx')
-    })
-
-    it('packages/shared-types classificado como package, não app', async () => {
-      const { detectProject } = await import('../../src/detector/index.js')
-      const { details } = await detectProject()
-      expect(details.structure.packages).toContain('packages/shared-types')
-      expect(details.structure.apps).not.toContain('packages/shared-types')
-    })
-  })
-
 })

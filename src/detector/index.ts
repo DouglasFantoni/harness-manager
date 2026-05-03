@@ -19,8 +19,8 @@ export interface DetectionResult {
 export async function detectProject(): Promise<DetectionResult> {
   const rootPkg = await readJsonSafe('package.json')
   const isMonorepo = await detectMonorepo(rootPkg)
-  const stack = await detectStack(rootPkg)
   const structure = await detectStructure(rootPkg, isMonorepo)
+  const stack = await detectStack(rootPkg, structure)
   const commands = detectCommands(rootPkg)
   const conventions = await detectConventions()
 
@@ -49,12 +49,23 @@ export async function detectProject(): Promise<DetectionResult> {
 
 // ─── Stack ────────────────────────────────────────────────────────────────────
 
-async function detectStack(pkg: Record<string, unknown> | null) {
-  const deps = {
+async function detectStack(pkg: Record<string, unknown> | null, structure?: { apps: string[]; packages: string[] }) {
+  // Agrega deps do root + todas as apps/packages (monorepo tem deps nas apps, não no root)
+  const allDeps: Record<string, string> = {
     ...((pkg?.dependencies ?? {}) as Record<string, string>),
     ...((pkg?.devDependencies ?? {}) as Record<string, string>),
   }
-  const has = (dep: string) => dep in deps
+
+  if (structure) {
+    const allPaths = [...structure.apps, ...structure.packages]
+    await Promise.all(allPaths.map(async pkgPath => {
+      const subPkg = await readJsonSafe(join(pkgPath, 'package.json'))
+      if (!subPkg) return
+      Object.assign(allDeps, subPkg.dependencies ?? {}, subPkg.devDependencies ?? {})
+    }))
+  }
+
+  const has = (dep: string) => dep in allDeps
 
   return {
     backend: [

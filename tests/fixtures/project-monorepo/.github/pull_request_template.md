@@ -1,4 +1,5 @@
 ## O que muda
+
 ## Checklist
-- [ ] typecheck passando
-- [ ] testes passando
+- [ ] Typecheck passando
+- [ ] Testes passando
