@@ -11,6 +11,9 @@ const AVAILABLE_PROMPTS = [
   'glossary-generate',
   'rules-generate',
   'mistakes-extract',
+  'spec-create',
+  'spec-implement',
+  'spec-to-tests',
 ]
 
 export async function runPrompt(args: string[]): Promise<void> {
@@ -101,6 +104,8 @@ async function buildPromptContext(project: ProjectDetails): Promise<Record<strin
   ctx['harness.rules'] = await readHarnessFile('core/rules.md')
   ctx['harness.mistakes'] = await readHarnessFile('memory/mistakes.md')
   ctx['harness.skill_template'] = await readHarnessFile('skills/_template/SKILL.md')
+  ctx['harness.spec_template'] = await readHarnessFile('specs/_template.md')
+  ctx['harness.patterns'] = await readHarnessFile('memory/patterns.md')
 
   return ctx
 }
@@ -133,6 +138,9 @@ function printList(): void {
     'glossary-generate':  'Gera o glossário inicial a partir do código',
     'rules-generate':     'Gera as regras iniciais a partir das convenções',
     'mistakes-extract':   'Extrai armadilhas do histórico de commits e PRs',
+    'spec-create':        'Cria uma spec de feature a partir de uma ideia',
+    'spec-implement':     'Implementa código a partir de uma spec existente',
+    'spec-to-tests':      'Gera testes a partir dos critérios de aceite de uma spec',
   }
   for (const [name, desc] of Object.entries(descriptions)) {
     console.log(`  harness prompt ${name.padEnd(22)} ${desc}`)

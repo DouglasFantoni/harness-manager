@@ -113,6 +113,27 @@ O output é um prompt. Execute-o com os arquivos do domínio como contexto.
 
 ---
 
+#### Etapa E — Specs iniciais (sempre sequencial, após D)
+
+Para cada domínio identificado na Fase 1, verificar se já existem features
+implementadas sem spec. Se sim, criar specs `status: draft` para documentar
+o comportamento atual.
+
+```bash
+harness prompt spec-create
+```
+
+Forneça como contexto o código existente do domínio.
+O objetivo é documentar o que já existe, não especificar novas features.
+
+- Caminho de saída: `.harness/specs/{feature}/spec.md`
+- Status inicial: sempre `draft` (revisão humana antes de usar)
+- Após criar: adicionar entrada em `.harness/specs/_index.md`
+
+> Se o projeto não tiver features implementadas ainda, pule esta etapa.
+
+---
+
 ### Fase 3 — Finalização (sempre sequencial)
 
 Após todas as etapas concluídas:
@@ -145,6 +166,7 @@ Sempre terminar com um resumo para o desenvolvedor:
 - [ ] Etapa B — rules.md gerado ou atualizado
 - [ ] Etapa C — mistakes.md gerado ou atualizado
 - [ ] Etapa D — skill criada para cada domínio identificado
+- [ ] Etapa E — specs draft criadas para features existentes (se aplicável)
 - [ ] harness sync executado com sucesso
 - [ ] Resumo apresentado ao desenvolvedor
 

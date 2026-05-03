@@ -7,6 +7,7 @@
 |-------|---------|--------|---------------|---------------|
 | _self-update | harness | ~400 | `/harness-update` | — |
 | harness-orchestrator | harness | ~600 | `/setup` | — |
+| spec-reader | specs | ~400 | `/spec-check` | — |
 
 <!-- Adicione suas skills abaixo. Exemplo:
 | minha-skill | backend | ~800 | — | /review, /audit |
