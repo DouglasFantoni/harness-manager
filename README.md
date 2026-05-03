@@ -1,20 +1,9 @@
 # AI Harness Framework
 
-> Um framework de contexto vivo e auto-evolutivo que aumenta a assertividade de IAs em projetos de software. Agnóstico de linguagem, acoplável a qualquer projeto, compatível com Cursor, Claude Code e GitHub Copilot.
+> A living context framework that makes AI tools progressively smarter about your specific project — across sessions, across tools, across time.
 
----
-
-## O que é
-
-O AI Harness é uma estrutura de arquivos que vive dentro do seu projeto (`.harness/`) e serve como **memória externalizada e estruturada** para IAs. Em vez de começar do zero a cada sessão, a IA carrega contexto acumulado do projeto — regras, decisões, padrões, armadilhas conhecidas e skills específicas do domínio.
-
-A assertividade cresce porque:
-
-- Erros não se repetem (`memory/mistakes.md` os documenta)
-- Skills são calibradas para o seu domínio, não genéricas
-- Hooks orientam o comportamento antes, durante e após cada task
-- O vocabulário do projeto é consistente via glossário
-- Cada sessão alimenta a próxima via feedback estruturado
+**→ [Why this exists](./PROBLEM.md)** — the problem we're solving and how to evaluate if we're solving it  
+**→ [How it works](./HOW_IT_WORKS.md)** — a full walkthrough of the framework, the CLI, and a typical session
 
 ---
 
