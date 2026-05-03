@@ -33,6 +33,7 @@ const registry: Registry = {
     { name: '/fix', file: 'shared/fix.md', description: 'Fix issue', supported_by: ['cursor', 'claude-code', 'copilot'], requires: [], globs: [] },
     { name: '/explain', file: 'shared/explain.md', description: 'Explain code', supported_by: ['copilot'], requires: [], globs: [] },
   ],
+  skillGlobs: [],
   skills: [
     { name: 'nestjs', domain: 'backend', weight: 800, exposes_command: [], required_by: ['/review'], load_with: [], conflicts_with: [] },
   ],
@@ -187,7 +188,8 @@ describe('CursorAdapter', () => {
 
   it('registry sem commands não lança erro', async () => {
     const { CursorAdapter } = await import('../../src/adapters/cursor.js')
-    const emptyRegistry: Registry = { commands: [], skills: [] }
+    const emptyRegistry: Registry = { commands: [], skillGlobs: [],
+  skills: [] }
     const adapter = new CursorAdapter(cursorConfig, project, emptyRegistry)
     await expect(adapter.generate()).resolves.toBeDefined()
   })

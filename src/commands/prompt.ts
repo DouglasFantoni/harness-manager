@@ -14,6 +14,7 @@ const AVAILABLE_PROMPTS = [
   'spec-create',
   'spec-implement',
   'spec-to-tests',
+  'memory-summarize',
 ]
 
 export async function runPrompt(args: string[]): Promise<void> {
@@ -106,6 +107,7 @@ async function buildPromptContext(project: ProjectDetails): Promise<Record<strin
   ctx['harness.skill_template'] = await readHarnessFile('skills/_template/SKILL.md')
   ctx['harness.spec_template'] = await readHarnessFile('specs/_template.md')
   ctx['harness.patterns'] = await readHarnessFile('memory/patterns.md')
+  ctx['harness.decisions'] = await readHarnessFile('memory/decisions.md')
 
   return ctx
 }
@@ -141,6 +143,7 @@ function printList(): void {
     'spec-create':        'Cria uma spec de feature a partir de uma ideia',
     'spec-implement':     'Implementa código a partir de uma spec existente',
     'spec-to-tests':      'Gera testes a partir dos critérios de aceite de uma spec',
+    'memory-summarize':   'Condensa arquivos de memory que cresceram demais',
   }
   for (const [name, desc] of Object.entries(descriptions)) {
     console.log(`  harness prompt ${name.padEnd(22)} ${desc}`)

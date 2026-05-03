@@ -124,6 +124,7 @@ async function patchGitignore(): Promise<void> {
 
   const block = `
 # AI Harness — gerado pelo sync
+.harness/skills/**/SKILL.min.md
 CLAUDE.md
 .cursor/rules/
 .harness/adapters/

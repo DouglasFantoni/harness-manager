@@ -70,6 +70,13 @@ export interface CommandMeta {
   globs: string[]
 }
 
+// Mapeamento glob → skill para lazy loading
+export interface SkillGlobMapping {
+  glob: string        // ex: "**/*.service.ts", "apps/api/**"
+  skill: string       // nome da skill no _index.md
+  description: string // exibido no .mdc gerado
+}
+
 export interface SkillMeta {
   name: string
   domain: string
@@ -78,11 +85,15 @@ export interface SkillMeta {
   required_by: string[]
   load_with: string[]
   conflicts_with: string[]
+  // Globs que disparam carregamento automático desta skill
+  globs?: string[]
 }
 
 export interface Registry {
   commands: CommandMeta[]
   skills: SkillMeta[]
+  // Mapeamentos glob → skill derivados das skills com globs
+  skillGlobs: SkillGlobMapping[]
 }
 
 export interface SyncFlags {

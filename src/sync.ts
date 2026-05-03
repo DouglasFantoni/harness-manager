@@ -1,5 +1,6 @@
 import { relative } from 'path'
 import { loadConfig } from './config.js'
+import { generateSkillMinFiles } from './skill-minifier.js'
 import { generateContext } from './context-gen.js'
 import { loadRegistry } from './registry.js'
 import { resetWarnings } from './resolver.js'
@@ -29,6 +30,14 @@ export async function runSync(flags: SyncFlags): Promise<void> {
   if (!flags.dryRun) {
     const updated = await generateContext(project, flags.forceContext)
     if (updated) console.log('📄 core/context.md atualizado\n')
+  }
+
+  // Gera SKILL.min.md para todas as skills antes dos adapters
+  if (!flags.dryRun) {
+    const minified = await generateSkillMinFiles()
+    if (minified.length > 0) {
+      console.log(`⚡ ${minified.length} skill(s) minificada(s)\n`)
+    }
   }
 
   const registry = await loadRegistry()

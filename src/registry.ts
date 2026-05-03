@@ -1,26 +1,35 @@
 import { readFile } from 'fs/promises'
 import { resolve } from 'path'
 import matter from 'gray-matter'
-import type { Registry, CommandMeta, SkillMeta } from './types.js'
+import type { Registry, CommandMeta, SkillMeta, SkillGlobMapping } from './types.js'
 
-const HARNESS_ROOT = () => resolve(process.cwd(), '.harness')
+function harnessRoot() { return resolve(process.cwd(), '.harness') }
 
 export async function loadRegistry(): Promise<Registry> {
   const [commands, skills] = await Promise.all([
     loadCommands(),
     loadSkills(),
   ])
-  return { commands, skills }
+
+  // Deriva mapeamentos glob → skill a partir das skills que declaram globs
+  const skillGlobs: SkillGlobMapping[] = skills
+    .filter(s => s.globs?.length)
+    .flatMap(s => (s.globs ?? []).map(glob => ({
+      glob,
+      skill: s.name,
+      description: `Carrega skill "${s.name}" (${s.domain})`,
+    })))
+
+  return { commands, skills, skillGlobs }
 }
 
 async function loadCommands(): Promise<CommandMeta[]> {
   const indexRaw = await readFile(
-    resolve(HARNESS_ROOT(), 'commands/_index.md'), 'utf-8'
+    resolve(harnessRoot(), 'commands/_index.md'), 'utf-8'
   ).catch(() => '')
 
   if (!indexRaw) return []
 
-  // Tabela: | Comando | Descrição | Cursor | Claude Code | Copilot | Arquivo |
   const rows = parseTable(indexRaw)
   const commands: CommandMeta[] = []
 
@@ -48,7 +57,7 @@ async function loadCommands(): Promise<CommandMeta[]> {
     let requires: string[] = []
 
     try {
-      const raw = await readFile(resolve(HARNESS_ROOT(), 'commands', file), 'utf-8')
+      const raw = await readFile(resolve(harnessRoot(), 'commands', file), 'utf-8')
       const { data } = matter(raw)
       if (data.supported_by?.length) supported_by = data.supported_by
       if (data.description)          description  = data.description
@@ -64,7 +73,7 @@ async function loadCommands(): Promise<CommandMeta[]> {
 
 async function loadSkills(): Promise<SkillMeta[]> {
   const indexRaw = await readFile(
-    resolve(HARNESS_ROOT(), 'skills/_index.md'), 'utf-8'
+    resolve(harnessRoot(), 'skills/_index.md'), 'utf-8'
   ).catch(() => '')
 
   if (!indexRaw) return []
@@ -81,8 +90,32 @@ async function loadSkills(): Promise<SkillMeta[]> {
 
     if (!name) continue
 
+    // Lê globs do SKILL.md se existir
+    let globs: string[] = []
+    try {
+      const skillPath = resolve(harnessRoot(), `skills/${name}/SKILL.md`)
+      const raw = await readFile(skillPath, 'utf-8')
+
+      // Extrai bloco yaml do ## Meta
+      const metaMatch = raw.match(/```yaml\n([\s\S]*?)```/)
+      if (metaMatch) {
+        const metaLines = metaMatch[1].split('\n')
+        const globLine = metaLines.find(l => l.trim().startsWith('globs:'))
+        if (globLine) {
+          // globs: ["**/*.service.ts", "**/*.controller.ts"]
+          const globMatch = globLine.match(/\[([^\]]+)\]/)
+          if (globMatch) {
+            globs = globMatch[1]
+              .split(',')
+              .map(g => g.trim().replace(/['"]/g, ''))
+              .filter(Boolean)
+          }
+        }
+      }
+    } catch {}
+
     skills.push({
-      name, domain, weight,
+      name, domain, weight, globs,
       exposes_command: [],
       required_by: [],
       load_with: [],

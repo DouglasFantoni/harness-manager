@@ -28,6 +28,7 @@ export class ClaudeCodeAdapter {
       'Consulte `.harness/hooks/` para: `post-task`, `on-ambiguity`, `on-skill-load`, `on-command`',
     ].join('\n'))
     sections.push(await this.buildCommands())
+    sections.push(await this.buildSkillsLazyIndex())
 
     const content = sections.filter(Boolean).join('\n\n---\n\n')
     const resolved = resolvePlaceholders(content, this.project)
@@ -81,6 +82,38 @@ Skills disponíveis em \`.harness/skills/_index.md\`.`
     }
 
     return lines.join('\n\n')
+  }
+
+  private async buildSkillsLazyIndex(): Promise<string> {
+    if (!this.registry.skillGlobs.length) return ''
+
+    const lines = [
+      '## Skills com carregamento automático',
+      '',
+      'As skills abaixo são carregadas automaticamente quando você trabalha',
+      'em arquivos que correspondem ao padrão indicado.',
+      'Leia o SKILL.md correspondente antes de agir nesses arquivos.',
+      '',
+    ]
+
+    for (const mapping of this.registry.skillGlobs) {
+      const minPath = `skills/${mapping.skill}/SKILL.min.md`
+      const fullPath = `skills/${mapping.skill}/SKILL.md`
+
+      // Prefere versão minificada se existir
+      const hasMin = await readFile(
+        resolve(harnessRoot(), minPath), 'utf-8'
+      ).then(() => true).catch(() => false)
+
+      const skillFile = hasMin ? minPath : fullPath
+
+      lines.push(`### \`${mapping.glob}\` → skill \`${mapping.skill}\``)
+      lines.push(`Ao abrir/editar arquivos que correspondem a \`${mapping.glob}\`,`)
+      lines.push(`leia \`.harness/${skillFile}\` antes de qualquer ação.`)
+      lines.push('')
+    }
+
+    return lines.join('\n')
   }
 
   private async loadSection(relativePath: string, title: string): Promise<string> {
