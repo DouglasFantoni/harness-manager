@@ -32,11 +32,15 @@ export async function runSync(flags: SyncFlags): Promise<void> {
     if (updated) console.log('📄 core/context.md atualizado\n')
   }
 
-  // Gera SKILL.min.md para todas as skills antes dos adapters
+  // Gera SKILL.min.md e reporta métricas de tokens
   if (!flags.dryRun) {
-    const minified = await generateSkillMinFiles()
-    if (minified.length > 0) {
-      console.log(`⚡ ${minified.length} skill(s) minificada(s)\n`)
+    const minResults = await generateSkillMinFiles()
+    const changed = minResults.filter(r => r.changed)
+    if (changed.length > 0) {
+      const totalBefore = changed.reduce((s, r) => s + r.tokensBefore, 0)
+      const totalAfter  = changed.reduce((s, r) => s + r.tokensAfter, 0)
+      const pct = Math.round((1 - totalAfter / totalBefore) * 100)
+      console.log(`⚡ ${changed.length} skill(s) minificada(s) — ${totalBefore} → ${totalAfter} tokens (-${pct}%)\n`)
     }
   }
 

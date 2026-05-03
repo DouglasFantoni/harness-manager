@@ -7,9 +7,6 @@ const TMP = resolve(tmpdir(), `harness-minifier-test-${Date.now()}`)
 
 const FULL_SKILL = `# Skill: Payroll
 
-> Copie este arquivo para \`skills/{domain}/SKILL.md\` e preencha todos os campos.
-> Depois adicione uma entrada em \`skills/_index.md\`.
-
 ## Meta
 
 \`\`\`yaml
@@ -19,7 +16,7 @@ exposes_command: ["/calc-payroll"]
 required_by: ["/review"]
 load_with: ["fiscal"]
 conflicts_with: []
-globs: ["**/*.payroll.ts", "apps/api/src/payroll/**"]
+globs: ["**/*.payroll.ts"]
 \`\`\`
 
 ## Quando usar
@@ -33,7 +30,7 @@ Para lógicas de emissão fiscal (NFS-e). Use a skill \`fiscal\`.
 
 ## Contexto essencial
 
-- Tabelas INSS/IRRF mudam anualmente — sempre validar contra decisions.md
+- Tabelas INSS/IRRF mudam anualmente
 - O pacote canônico é \`packages/tax-calculator/src/tax-calculator.ts\`
 - O padrão \`taxSnapshot\` deve ser usado em todo cálculo persistido
 
@@ -46,14 +43,12 @@ Para lógicas de emissão fiscal (NFS-e). Use a skill \`fiscal\`.
 ## Padrões
 
 - Ver \`examples/good/progressive-inss.ts\` para implementação correta
-- Ver \`examples/bad/flat-rate-inss.ts\` para o anti-padrão
 
 ## Checklist de execução
 
 - [ ] Tabela vigente validada?
-- [ ] \`taxSnapshot\` incluído no resultado?
-- [ ] Tipo \`PayrollResult\` usado?
-- [ ] \`pnpm test\` e \`pnpm typecheck\` passando?
+- [ ] taxSnapshot incluído no resultado?
+- [ ] Tipo PayrollResult usado?
 
 ## Referências
 
@@ -66,6 +61,88 @@ async function setupSkill(name: string, content: string) {
   await mkdir(skillDir, { recursive: true })
   await writeFile(resolve(skillDir, 'SKILL.md'), content)
 }
+
+describe('minify (unit)', () => {
+  it('remove ## Meta e todo seu conteúdo incluindo o yaml block', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify(FULL_SKILL)
+    expect(result).not.toContain('## Meta')
+    expect(result).not.toContain('```yaml')
+    expect(result).not.toContain('weight: ~900')
+    expect(result).not.toContain('exposes_command')
+    expect(result).not.toContain('globs:')
+  })
+
+  it('remove ## Checklist de execução e todo seu conteúdo', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify(FULL_SKILL)
+    expect(result).not.toContain('## Checklist')
+    expect(result).not.toContain('- [ ] Tabela vigente')
+    expect(result).not.toContain('- [ ] taxSnapshot')
+  })
+
+  it('remove ## Referências e todo seu conteúdo', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify(FULL_SKILL)
+    expect(result).not.toContain('## Referências')
+    expect(result).not.toContain('memory/decisions.md#tax-package')
+    expect(result).not.toContain('memory/mistakes.md#inss-flat-rate')
+  })
+
+  it('mantém todas as seções essenciais para runtime', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify(FULL_SKILL)
+    expect(result).toContain('## Quando usar')
+    expect(result).toContain('## Quando NÃO usar')
+    expect(result).toContain('## Contexto essencial')
+    expect(result).toContain('## Regras')
+    expect(result).toContain('## Padrões')
+  })
+
+  it('mantém conteúdo das regras intacto', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify(FULL_SKILL)
+    expect(result).toContain('Nunca calcular INSS com alíquota flat')
+    expect(result).toContain('taxSnapshot')
+    expect(result).toContain('PayrollResult')
+  })
+
+  it('resultado é menor que o original', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify(FULL_SKILL)
+    expect(result.length).toBeLessThan(FULL_SKILL.length)
+  })
+
+  it('não altera conteúdo dentro de blocos de código fora do Meta', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const withCode = FULL_SKILL + `\n## Protocolo\n\n\`\`\`typescript\n// Este código deve ser mantido\nconst x = calc()\n\`\`\`\n`
+    const result = minify(withCode)
+    expect(result).toContain('```typescript')
+    expect(result).toContain('// Este código deve ser mantido')
+    expect(result).toContain('const x = calc()')
+  })
+
+  it('remove comentários HTML', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const withComment = FULL_SKILL + '\n<!-- Este comentário não deve aparecer -->\n'
+    const result = minify(withComment)
+    expect(result).not.toContain('Este comentário não deve aparecer')
+  })
+
+  it('colapsa linhas em branco duplicadas', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const withBlanks = FULL_SKILL.replace(/\n\n/g, '\n\n\n\n')
+    const result = minify(withBlanks)
+    expect(result).not.toContain('\n\n\n')
+  })
+
+  it('não deixa linhas em branco no início ou fim', async () => {
+    const { minify } = await import('../../src/skill-minifier.js')
+    const result = minify('\n\n' + FULL_SKILL + '\n\n\n')
+    expect(result.startsWith('\n')).toBe(false)
+    expect(result.endsWith('\n\n')).toBe(false)
+  })
+})
 
 describe('generateSkillMinFiles', () => {
   beforeEach(async () => {
@@ -83,23 +160,13 @@ describe('generateSkillMinFiles', () => {
     it('gera SKILL.min.md para cada skill', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      const files = await generateSkillMinFiles()
-      expect(files).toHaveLength(1)
-      expect(files[0]).toContain('SKILL.min.md')
+      const results = await generateSkillMinFiles()
+      expect(results).toHaveLength(1)
+      expect(results[0].path).toContain('SKILL.min.md')
+      expect(results[0].changed).toBe(true)
     })
 
-    it('SKILL.min.md é menor que SKILL.md', async () => {
-      await setupSkill('payroll', FULL_SKILL)
-      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await generateSkillMinFiles()
-      const original = FULL_SKILL.length
-      const minified = (await readFile(
-        resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
-      )).length
-      expect(minified).toBeLessThan(original)
-    })
-
-    it('remove a seção ## Meta', async () => {
+    it('SKILL.min.md gerado não contém ## Meta', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
       await generateSkillMinFiles()
@@ -107,139 +174,114 @@ describe('generateSkillMinFiles', () => {
         resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
       )
       expect(content).not.toContain('## Meta')
-      expect(content).not.toContain('```yaml')
       expect(content).not.toContain('weight: ~900')
     })
 
-    it('remove a seção ## Checklist de execução', async () => {
+    it('SKILL.min.md gerado não contém ## Checklist', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
       await generateSkillMinFiles()
       const content = await readFile(
         resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
       )
-      expect(content).not.toContain('## Checklist de execução')
-      expect(content).not.toContain('- [ ] Tabela vigente validada?')
+      expect(content).not.toContain('## Checklist')
+      expect(content).not.toContain('- [ ] Tabela vigente')
     })
 
-    it('remove a seção ## Referências', async () => {
+    it('reporta tokensBefore e tokensAfter', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await generateSkillMinFiles()
-      const content = await readFile(
-        resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
-      )
-      expect(content).not.toContain('## Referências')
-      expect(content).not.toContain('memory/decisions.md#tax-package')
+      const results = await generateSkillMinFiles()
+      expect(results[0].tokensBefore).toBeGreaterThan(0)
+      expect(results[0].tokensAfter).toBeGreaterThan(0)
+      expect(results[0].tokensAfter).toBeLessThan(results[0].tokensBefore)
     })
 
-    it('mantém seções essenciais para a IA', async () => {
+    it('redução de tokens é maior que 10%', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await generateSkillMinFiles()
-      const content = await readFile(
-        resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
-      )
-      expect(content).toContain('## Quando usar')
-      expect(content).toContain('## Quando NÃO usar')
-      expect(content).toContain('## Contexto essencial')
-      expect(content).toContain('## Regras')
-      expect(content).toContain('## Padrões')
-    })
-
-    it('mantém conteúdo das regras', async () => {
-      await setupSkill('payroll', FULL_SKILL)
-      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await generateSkillMinFiles()
-      const content = await readFile(
-        resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
-      )
-      expect(content).toContain('Nunca calcular INSS com alíquota flat')
-      expect(content).toContain('taxSnapshot')
+      const results = await generateSkillMinFiles()
+      const reduction = 1 - results[0].tokensAfter / results[0].tokensBefore
+      expect(reduction).toBeGreaterThan(0.1)
     })
   })
 
   describe('idempotência', () => {
-    it('não regenera se o conteúdo não mudou', async () => {
-      await setupSkill('payroll', FULL_SKILL)
-      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      const first = await generateSkillMinFiles()
-      expect(first).toHaveLength(1)
-      const second = await generateSkillMinFiles()
-      expect(second).toHaveLength(0)
-    })
-
-    it('regenera se SKILL.md foi atualizado', async () => {
+    it('changed=false na segunda execução sem mudanças', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
       await generateSkillMinFiles()
-      // Modifica o SKILL.md
+      const second = await generateSkillMinFiles()
+      expect(second[0].changed).toBe(false)
+    })
+
+    it('changed=true quando SKILL.md é atualizado', async () => {
+      await setupSkill('payroll', FULL_SKILL)
+      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
+      await generateSkillMinFiles()
       await writeFile(
         resolve(TMP, '.harness/skills/payroll/SKILL.md'),
-        FULL_SKILL + '\n## Nota extra\n\nConteúdo novo.\n'
+        FULL_SKILL + '\n## Nota\n\nConteúdo novo.\n'
       )
       const second = await generateSkillMinFiles()
-      expect(second).toHaveLength(1)
+      expect(second[0].changed).toBe(true)
     })
   })
 
   describe('dry-run', () => {
-    it('não escreve arquivo em dry-run', async () => {
+    it('não escreve arquivo mas retorna resultado', async () => {
       await setupSkill('payroll', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await generateSkillMinFiles(true)
+      const results = await generateSkillMinFiles(true)
+      expect(results[0].changed).toBe(true)
       const exists = await readFile(
         resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
       ).then(() => true).catch(() => false)
       expect(exists).toBe(false)
     })
-
-    it('retorna os paths mesmo em dry-run', async () => {
-      await setupSkill('payroll', FULL_SKILL)
-      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      const files = await generateSkillMinFiles(true)
-      expect(files).toHaveLength(1)
-    })
   })
 
   describe('edge cases', () => {
-    it('pula diretório _template', async () => {
+    it('pula _template', async () => {
       await setupSkill('_template', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      const files = await generateSkillMinFiles()
-      expect(files).toHaveLength(0)
+      const results = await generateSkillMinFiles()
+      expect(results).toHaveLength(0)
     })
 
     it('processa múltiplas skills', async () => {
       await setupSkill('payroll', FULL_SKILL)
       await setupSkill('fiscal', FULL_SKILL)
-      await setupSkill('nestjs', FULL_SKILL)
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      const files = await generateSkillMinFiles()
-      expect(files).toHaveLength(3)
+      const results = await generateSkillMinFiles()
+      expect(results).toHaveLength(2)
     })
 
-    it('retorna array vazio se não há skills', async () => {
-      await mkdir(resolve(TMP, '.harness/skills'), { recursive: true })
+    it('retorna array vazio se skills/ não existe', async () => {
       const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      const files = await generateSkillMinFiles()
-      expect(files).toHaveLength(0)
+      const results = await generateSkillMinFiles()
+      expect(results).toEqual([])
     })
+  })
+})
 
-    it('remove linhas em branco duplicadas', async () => {
-      const withBlanks = FULL_SKILL.replace(/\n\n/g, '\n\n\n\n')
-      await setupSkill('payroll', withBlanks)
-      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await generateSkillMinFiles()
-      const content = await readFile(
-        resolve(TMP, '.harness/skills/payroll/SKILL.min.md'), 'utf-8'
-      )
-      expect(content).not.toContain('\n\n\n')
-    })
+describe('countTokens', () => {
+  it('retorna contagem maior que zero para texto não vazio', async () => {
+    const { countTokens } = await import('../../src/skill-minifier.js')
+    const count = await countTokens('Nunca calcular INSS com alíquota flat.')
+    expect(count).toBeGreaterThan(0)
+  })
 
-    it('lida sem crash quando skills/ não existe', async () => {
-      const { generateSkillMinFiles } = await import('../../src/skill-minifier.js')
-      await expect(generateSkillMinFiles()).resolves.toEqual([])
-    })
+  it('texto maior tem mais tokens', async () => {
+    const { countTokens } = await import('../../src/skill-minifier.js')
+    const short = await countTokens('Regra simples.')
+    const long = await countTokens('Esta é uma regra muito mais longa com muito mais conteúdo e detalhes adicionais.')
+    expect(long).toBeGreaterThan(short)
+  })
+
+  it('retorna 0 para string vazia', async () => {
+    const { countTokens } = await import('../../src/skill-minifier.js')
+    const count = await countTokens('')
+    expect(count).toBe(0)
   })
 })
