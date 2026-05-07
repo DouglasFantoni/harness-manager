@@ -1,7 +1,6 @@
 import { cp, writeFile, readFile, access } from 'fs/promises'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
-import { execSync } from 'child_process'
 import { detectProject } from '../detector/index.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -74,111 +73,8 @@ export async function runInit(args: string[]): Promise<void> {
     console.log('✅ Pronto. Rode: harness sync\n')
   }
 
-  // 4. Dicas de performance (sempre exibidas)
-  await showPerformanceTips()
-}
-
-// ─── Dicas de performance ────────────────────────────────────────────────────
-
-async function showPerformanceTips(): Promise<void> {
-  const env = detectEnvironment()
-  const tips = buildPerformanceTips(env)
-
-  if (!tips.length) return
-
-  console.log('⚡ Dicas de performance:\n')
-  tips.forEach(tip => console.log(tip))
-  console.log()
-}
-
-interface Environment {
-  hasRipgrep: boolean
-  isWSL: boolean
-  projectOnWindowsMount: boolean
-  useBuiltinRipgrep: string | undefined
-}
-
-function detectEnvironment(): Environment {
-  const hasRipgrep = commandExists('rg')
-  const isWSL = checkIsWSL()
-  const projectOnWindowsMount = isWSL && getRoot().startsWith('/mnt/')
-  const useBuiltinRipgrep = process.env.USE_BUILTIN_RIPGREP
-
-  return { hasRipgrep, isWSL, projectOnWindowsMount, useBuiltinRipgrep }
-}
-
-function buildPerformanceTips(env: Environment): string[] {
-  const tips: string[] = []
-
-  // Tip 1 — ripgrep não instalado no sistema
-  if (!env.hasRipgrep) {
-    tips.push('   📦 ripgrep não encontrado no sistema.')
-    tips.push('      Instale para buscas mais rápidas e menos ruído de tokens:\n')
-
-    if (env.isWSL) {
-      tips.push('      sudo apt install ripgrep')
-    } else if (process.platform === 'darwin') {
-      tips.push('      brew install ripgrep')
-    } else {
-      tips.push('      sudo apt install ripgrep   # Ubuntu/Debian')
-      tips.push('      sudo dnf install ripgrep   # Fedora')
-      tips.push('      sudo pacman -S ripgrep     # Arch')
-    }
-    tips.push('')
-  }
-
-  // Tip 2 — ripgrep instalado mas Claude Code ainda usa o bundled
-  if (env.hasRipgrep && env.useBuiltinRipgrep !== '0') {
-    tips.push('   🚀 ripgrep instalado! Para que o Claude Code use o sistema')
-    tips.push('      ao invés da versão bundled (5-10x mais rápido em monorepos):')
-    tips.push('')
-    tips.push('      echo \'export USE_BUILTIN_RIPGREP=0\' >> ~/.zshrc')
-    tips.push('      source ~/.zshrc')
-    tips.push('')
-  }
-
-  // Tip 3 — USE_BUILTIN_RIPGREP=0 já configurado, confirmar
-  if (env.hasRipgrep && env.useBuiltinRipgrep === '0') {
-    tips.push('   ✅ ripgrep do sistema ativo (USE_BUILTIN_RIPGREP=0)')
-  }
-
-  // Tip 4 — projeto em /mnt/ no WSL
-  if (env.projectOnWindowsMount) {
-    tips.push('   ⚠️  Projeto em mount do Windows (/mnt/...) detectado.')
-    tips.push('      Buscas no WSL são muito mais lentas em /mnt/c/ do que em /home/.')
-    tips.push('      Para melhor performance, mova o projeto para o filesystem Linux:')
-    tips.push('')
-    tips.push('      mv /mnt/c/seu-projeto ~/projetos/seu-projeto')
-    tips.push('')
-  }
-
-  return tips
-}
-
-// ─── Helpers de detecção ─────────────────────────────────────────────────────
-
-function commandExists(cmd: string): boolean {
-  try {
-    execSync(`which ${cmd}`, { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
-}
-
-function checkIsWSL(): boolean {
-  try {
-    const release = readFileSync('/proc/version', 'utf-8').toLowerCase()
-    return release.includes('microsoft') || release.includes('wsl')
-  } catch {
-    return false
-  }
-}
-
-// readFileSync síncrono — só usado na detecção de ambiente, não no caminho principal
-function readFileSync(path: string, encoding: BufferEncoding): string {
-  const { readFileSync: rfs } = require('fs')
-  return rfs(path, encoding)
+  // 4. Dica de performance
+  console.log('⚡ Dicas de performance: https://github.com/DouglasFantoni/harness-manager/blob/main/PERFORMANCE.md\n')
 }
 
 // ─── Patches ─────────────────────────────────────────────────────────────────
