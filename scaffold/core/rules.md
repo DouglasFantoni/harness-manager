@@ -33,3 +33,12 @@
 
 Os comandos disponíveis (lint, test, typecheck, build) estão em `project-details.json`.
 Sempre use esses comandos para validação — nunca invente variações.
+
+## Ferramentas de busca
+
+- Use `rg` (ripgrep) ao invés de `grep` em todos os comandos bash
+- `rg` respeita `.gitignore` por padrão — sem ruído de `node_modules/`, `dist/`, `.next/`
+- Prefira `rg -l` quando só precisar dos nomes dos arquivos (mais rápido, menos tokens)
+- Use `rg --type ts` ou `rg --type js` para limitar ao tipo de arquivo relevante
+- Use `rg -F` para busca de string literal (mais rápido que regex quando não precisa de padrão)
+- Se `rg` não estiver disponível: `grep -r --exclude-dir={node_modules,dist,.next,coverage}`
