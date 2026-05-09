@@ -2,6 +2,7 @@
 import { runInit } from './commands/init.js'
 import { runSync } from './sync.js'
 import { runPrompt } from './commands/prompt.js'
+import { runSkillSync, runSkillAdd } from './commands/skill-sync.js'
 
 const [,, command, ...args] = process.argv
 
@@ -17,6 +18,12 @@ const USAGE = `
 
     harness prompt <nome>                Exibe prompt pronto para copiar e colar na IA
     harness prompt --list                Lista todos os prompts disponíveis
+
+    harness skill-add <nome>             Instala skill da registry oficial
+    harness skill-sync                   Atualiza todas as skills com source
+    harness skill-sync <nome>            Atualiza uma skill específica
+    harness skill-sync --check           Mostra quais têm update disponível
+    harness skill-sync --dry-run         Mostra diff sem aplicar
 `
 
 
@@ -37,6 +44,16 @@ async function main() {
 
   if (command === 'init') {
     await runInit(args)
+    return
+  }
+
+  if (command === 'skill-add') {
+    await runSkillAdd(args)
+    return
+  }
+
+  if (command === 'skill-sync') {
+    await runSkillSync(args)
     return
   }
 

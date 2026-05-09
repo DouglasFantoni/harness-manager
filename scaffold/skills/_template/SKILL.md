@@ -59,3 +59,8 @@ conflicts_with: []      # skills que NÃO devem ser carregadas simultaneamente
      - `memory/mistakes.md#{ancora}`
      - `commands/shared/{comando}.md`
 -->
+
+## Customizações do projeto
+
+<!-- HARNESS:CUSTOM:START -->
+<!-- HARNESS:CUSTOM:END -->
