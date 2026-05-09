@@ -47,3 +47,29 @@ sync: false
 | `nestjs` | NestJS — services, controllers, módulos, injeção de dependência | 1.0.0 |
 | `nextjs` | Next.js — App Router, Server Components, RSC patterns | 1.0.0 |
 | `payroll` | Folha de pagamento — INSS, IRRF, FGTS, taxSnapshot | 1.0.0 |
+
+---
+
+## Rule Packs
+
+Conjuntos de regras organizados por categoria.
+
+```bash
+harness rule-add typescript
+harness rule-add nestjs
+harness rule-add security
+harness rule-add git
+```
+
+```bash
+harness rule-sync              # atualiza todos
+harness rule-sync typescript   # atualiza um específico
+harness rule-sync --check      # verifica versões
+```
+
+| Pack | Descrição | Versão |
+|------|-----------|--------|
+| `typescript` | Tipos, imports, nullability, async, validação | 1.0.0 |
+| `nestjs` | Estrutura, providers, DTOs, config, exceptions | 1.0.0 |
+| `security` | Dados sensíveis, auth, inputs, APIs, dependências | 1.0.0 |
+| `git` | Commits, branches, PRs, o que nunca fazer | 1.0.0 |

@@ -3,6 +3,7 @@ import { runInit } from './commands/init.js'
 import { runSync } from './sync.js'
 import { runPrompt } from './commands/prompt.js'
 import { runSkillSync, runSkillAdd } from './commands/skill-sync.js'
+import { runRuleSync, runRuleAdd } from './commands/rule-sync.js'
 
 const [,, command, ...args] = process.argv
 
@@ -24,6 +25,12 @@ const USAGE = `
     harness skill-sync <nome>            Atualiza uma skill específica
     harness skill-sync --check           Mostra quais têm update disponível
     harness skill-sync --dry-run         Mostra diff sem aplicar
+
+    harness rule-add <nome>              Instala rule pack da registry oficial
+    harness rule-sync                    Atualiza todos os rule packs com source
+    harness rule-sync <nome>             Atualiza um rule pack específico
+    harness rule-sync --check            Mostra quais têm update disponível
+    harness rule-sync --dry-run          Mostra diff sem aplicar
 `
 
 
@@ -44,6 +51,16 @@ async function main() {
 
   if (command === 'init') {
     await runInit(args)
+    return
+  }
+
+  if (command === 'rule-add') {
+    await runRuleAdd(args)
+    return
+  }
+
+  if (command === 'rule-sync') {
+    await runRuleSync(args)
     return
   }
 

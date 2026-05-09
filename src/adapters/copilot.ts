@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { resolve } from 'path'
 import matter from 'gray-matter'
 import { resolvePlaceholders } from '../resolver.js'
+import { loadAllRules } from '../harness-utils.js'
 import type { ToolConfig, ProjectDetails, Registry, AdapterResult } from '../types.js'
 
 function getRoot() { return process.cwd() }
@@ -18,7 +19,7 @@ export class CopilotAdapter {
     const sections: string[] = []
 
     sections.push(this.buildHeader())
-    sections.push(await this.loadSection('core/rules.md', '## Regras Globais'))
+    sections.push(`## Regras Globais\n\n${await loadAllRules(harnessRoot())}`)
     sections.push(await this.loadSection('core/context.md', '## Contexto do Projeto'))
     sections.push(await this.loadSection('hooks/pre-task.md', '## Antes de Qualquer Task'))
 

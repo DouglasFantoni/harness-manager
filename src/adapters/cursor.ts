@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { resolve } from 'path'
 import matter from 'gray-matter'
 import { resolvePlaceholders } from '../resolver.js'
+import { loadAllRules } from '../harness-utils.js'
 import type { ToolConfig, ProjectDetails, Registry, AdapterResult } from '../types.js'
 
 function getRoot() { return process.cwd() }
@@ -86,8 +87,7 @@ export class CursorAdapter {
   }
 
   private async buildMainRule(): Promise<string> {
-    const rules = await readFile(resolve(harnessRoot(), 'core/rules.md'), 'utf-8').catch(() => '')
-    const { content } = matter(rules)
+    const rulesContent = await loadAllRules(harnessRoot())
 
     return this.buildMdc({
       description: `Harness principal — ${this.project.project.name}`,
@@ -99,7 +99,7 @@ Antes de qualquer task, consulte \`.harness/hooks/pre-task.md\`.
 Skills disponíveis em \`.harness/skills/_index.md\`.
 Em caso de erro: \`.harness/hooks/on-error.md\`.
 
-${content.trim()}`,
+${rulesContent.trim()}`,
     })
   }
 
