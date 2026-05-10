@@ -35,27 +35,69 @@ globs: []
 Steps here.
 `
 
-async function setupHarness(opts: {
+interface SetupOpts {
+  commandsJson?: object
+  skillsJson?: object
+  commandFiles?: Record<string, string>
+  // Legado — fallback para _index.md
   commandsIndex?: string
   skillsIndex?: string
-  commandFiles?: Record<string, string>
-} = {}) {
+}
+
+async function setupHarness(opts: SetupOpts = {}) {
   const harnessDir = resolve(TMP, '.harness')
   await mkdir(resolve(harnessDir, 'commands/shared'), { recursive: true })
   await mkdir(resolve(harnessDir, 'skills'), { recursive: true })
+  await mkdir(resolve(harnessDir, 'hooks'), { recursive: true })
 
-  await writeFile(
-    resolve(harnessDir, 'commands/_index.md'),
-    opts.commandsIndex ?? COMMANDS_INDEX,
-  )
-  await writeFile(
-    resolve(harnessDir, 'skills/_index.md'),
-    opts.skillsIndex ?? SKILLS_INDEX,
-  )
+  // JSON (nova fonte de verdade)
+  if (opts.commandsJson !== undefined) {
+    await writeFile(
+      resolve(harnessDir, 'commands/index.json'),
+      JSON.stringify(opts.commandsJson)
+    )
+  } else if (opts.commandsIndex !== undefined) {
+    await writeFile(resolve(harnessDir, 'commands/_index.md'), opts.commandsIndex)
+  } else {
+    await writeFile(
+      resolve(harnessDir, 'commands/index.json'),
+      JSON.stringify(DEFAULT_COMMANDS_JSON)
+    )
+  }
+
+  if (opts.skillsJson !== undefined) {
+    await writeFile(
+      resolve(harnessDir, 'skills/index.json'),
+      JSON.stringify(opts.skillsJson)
+    )
+  } else if (opts.skillsIndex !== undefined) {
+    await writeFile(resolve(harnessDir, 'skills/_index.md'), opts.skillsIndex)
+  } else {
+    await writeFile(
+      resolve(harnessDir, 'skills/index.json'),
+      JSON.stringify(DEFAULT_SKILLS_JSON)
+    )
+  }
 
   for (const [name, content] of Object.entries(opts.commandFiles ?? {})) {
     await writeFile(resolve(harnessDir, 'commands', name), content)
   }
+}
+
+const DEFAULT_COMMANDS_JSON = {
+  commands: [
+    { name: '/review', description: 'Code review', file: 'shared/review.md', supported_by: ['cursor', 'claude-code'] },
+    { name: '/fix', description: 'Fix issue', file: 'shared/fix.md', supported_by: ['cursor', 'claude-code', 'copilot'] },
+    { name: '/explain', description: 'Explain code', file: 'shared/explain.md', supported_by: ['copilot'] },
+  ]
+}
+
+const DEFAULT_SKILLS_JSON = {
+  skills: [
+    { name: 'nestjs', domain: 'backend', weight: 800, description: 'NestJS skill', exposes_command: [], required_by: ['/review'], load_with: [], conflicts_with: [], globs: [], source: null, sync: false },
+    { name: 'payroll', domain: 'domínio', weight: 1200, description: 'Payroll skill', exposes_command: ['/calc-payroll'], required_by: ['/review', '/audit'], load_with: [], conflicts_with: [], globs: [], source: null, sync: false },
+    { name: '_self-update', domain: 'harness', weight: 400, description: 'Self update', exposes_command: ['/harness-update'], required_by: [], load_with: [], conflicts_with: [], globs: [], source: null, sync: false },
+  ]
 }
 
 describe('loadRegistry', () => {

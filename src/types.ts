@@ -81,18 +81,29 @@ export interface SkillMeta {
   name: string
   domain: string
   weight: number
+  description?: string
   exposes_command: string[]
   required_by: string[]
   load_with: string[]
   conflicts_with: string[]
-  // Globs que disparam carregamento automático desta skill
-  globs?: string[]
+  globs: string[]
+  source: string | null
+  sync: boolean
+}
+
+export interface HookMeta {
+  name: string
+  file: string
+  triggers: string
+  blocks: boolean
+  weight: number
+  always_load: boolean
 }
 
 export interface Registry {
   commands: CommandMeta[]
   skills: SkillMeta[]
-  // Mapeamentos glob → skill derivados das skills com globs
+  hooks: HookMeta[]
   skillGlobs: SkillGlobMapping[]
 }
 

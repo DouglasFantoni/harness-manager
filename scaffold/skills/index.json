@@ -1,0 +1,43 @@
+{
+  "skills": [
+    {
+      "name": "_self-update",
+      "domain": "harness",
+      "weight": 400,
+      "description": "Gerencia evolução supervisionada do harness via /harness-update",
+      "exposes_command": ["/harness-update"],
+      "required_by": [],
+      "load_with": [],
+      "conflicts_with": [],
+      "globs": [],
+      "source": null,
+      "sync": false
+    },
+    {
+      "name": "harness-orchestrator",
+      "domain": "harness",
+      "weight": 600,
+      "description": "Orquestra o /setup populando o harness com IA",
+      "exposes_command": ["/setup"],
+      "required_by": [],
+      "load_with": [],
+      "conflicts_with": ["_self-update"],
+      "globs": [],
+      "source": null,
+      "sync": false
+    },
+    {
+      "name": "spec-reader",
+      "domain": "specs",
+      "weight": 400,
+      "description": "Carrega specs antes de implementar e rastreia critérios de aceite",
+      "exposes_command": ["/spec-check"],
+      "required_by": [],
+      "load_with": [],
+      "conflicts_with": [],
+      "globs": [],
+      "source": null,
+      "sync": false
+    }
+  ]
+}

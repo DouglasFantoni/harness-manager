@@ -1,0 +1,58 @@
+{
+  "commands": [
+    {
+      "name": "/review",
+      "description": "Code review estruturado do arquivo ou seleção atual",
+      "file": "shared/review.md",
+      "supported_by": ["cursor", "claude-code"]
+    },
+    {
+      "name": "/explain",
+      "description": "Explica o código selecionado com contexto do projeto",
+      "file": "shared/explain.md",
+      "supported_by": ["cursor", "claude-code", "copilot"]
+    },
+    {
+      "name": "/refactor",
+      "description": "Refatora o código selecionado mantendo comportamento externo",
+      "file": "shared/refactor.md",
+      "supported_by": ["cursor", "claude-code"]
+    },
+    {
+      "name": "/test",
+      "description": "Gera ou complementa testes para o arquivo atual",
+      "file": "shared/test.md",
+      "supported_by": ["cursor", "claude-code"]
+    },
+    {
+      "name": "/fix",
+      "description": "Corrige o problema descrito ou o erro ativo no terminal",
+      "file": "shared/fix.md",
+      "supported_by": ["cursor", "claude-code", "copilot"]
+    },
+    {
+      "name": "/audit",
+      "description": "Auditoria de segurança e performance do arquivo ou módulo",
+      "file": "shared/audit.md",
+      "supported_by": ["cursor", "claude-code"]
+    },
+    {
+      "name": "/harness-update",
+      "description": "Propõe evoluções no harness com base no aprendizado da sessão",
+      "file": "shared/harness-update.md",
+      "supported_by": ["cursor", "claude-code"]
+    },
+    {
+      "name": "/setup",
+      "description": "Popula o harness com conteúdo real do projeto usando IA como orquestrador",
+      "file": "shared/setup.md",
+      "supported_by": ["cursor", "claude-code"]
+    },
+    {
+      "name": "/spec-check",
+      "description": "Verifica cobertura de testes para os critérios de aceite das specs",
+      "file": "shared/spec-check.md",
+      "supported_by": ["cursor", "claude-code"]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "hooks": [
+    {
+      "name": "pre-task",
+      "file": "pre-task.md",
+      "triggers": "Início de qualquer task",
+      "blocks": true,
+      "weight": 300,
+      "always_load": true
+    },
+    {
+      "name": "post-task",
+      "file": "post-task.md",
+      "triggers": "Conclusão de qualquer task",
+      "blocks": false,
+      "weight": 200,
+      "always_load": false
+    },
+    {
+      "name": "on-error",
+      "file": "on-error.md",
+      "triggers": "Qualquer falha ou exceção",
+      "blocks": true,
+      "weight": 250,
+      "always_load": true
+    },
+    {
+      "name": "on-ambiguity",
+      "file": "on-ambiguity.md",
+      "triggers": "Input incerto ou conflitante",
+      "blocks": true,
+      "weight": 150,
+      "always_load": false
+    },
+    {
+      "name": "on-skill-load",
+      "file": "on-skill-load.md",
+      "triggers": "Antes de carregar qualquer skill",
+      "blocks": false,
+      "weight": 100,
+      "always_load": false
+    },
+    {
+      "name": "on-command",
+      "file": "on-command.md",
+      "triggers": "Antes de executar slash command",
+      "blocks": true,
+      "weight": 150,
+      "always_load": false
+    }
+  ]
+}

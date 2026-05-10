@@ -4,6 +4,7 @@ import { generateSkillMinFiles } from './skill-minifier.js'
 import { generateContext } from './context-gen.js'
 import { loadRegistry } from './registry.js'
 import { resetWarnings } from './resolver.js'
+import { generateIndexFiles } from './index-generator.js'
 import { ClaudeCodeAdapter } from './adapters/claude-code.js'
 import { CursorAdapter } from './adapters/cursor.js'
 import { CopilotAdapter } from './adapters/copilot.js'
@@ -45,6 +46,19 @@ export async function runSync(flags: SyncFlags): Promise<void> {
   }
 
   const registry = await loadRegistry()
+
+  // Gera _index.md legíveis para a IA a partir dos JSONs
+  if (!flags.dryRun) {
+    const indexFiles = await generateIndexFiles(
+      registry.skills,
+      registry.commands,
+      registry.hooks,
+    )
+    if (indexFiles.length > 0) {
+      indexFiles.forEach(f => console.log(`📋 ${relative(process.cwd(), f)} atualizado`))
+      console.log()
+    }
+  }
 
   const toolEntries = Object.entries(config.tools).filter(([name, tool]) => {
     if (!tool.enabled) return false
