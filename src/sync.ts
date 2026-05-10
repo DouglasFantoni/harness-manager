@@ -5,6 +5,7 @@ import { generateContext } from './context-gen.js'
 import { loadRegistry } from './registry.js'
 import { resetWarnings } from './resolver.js'
 import { generateIndexFiles } from './index-generator.js'
+import { autoRegister } from './auto-register.js'
 import { ClaudeCodeAdapter } from './adapters/claude-code.js'
 import { CursorAdapter } from './adapters/cursor.js'
 import { CopilotAdapter } from './adapters/copilot.js'
@@ -46,6 +47,36 @@ export async function runSync(flags: SyncFlags): Promise<void> {
   }
 
   const registry = await loadRegistry()
+
+  // Auto-registra itens locais não catalogados nos JSONs
+  const registered = await autoRegister(
+    registry.skills,
+    registry.commands,
+    registry.hooks,
+    flags.dryRun,
+  )
+
+  if (registered.skills.length > 0) {
+    registered.skills.forEach(s =>
+      console.log(`🆕 skill detectada e registrada: ${s.name} (${s.domain})`)
+    )
+    // Atualiza o registry em memória para incluir as novas skills
+    registry.skills.push(...registered.skills)
+    console.log()
+  }
+  if (registered.hooks.length > 0) {
+    registered.hooks.forEach(h =>
+      console.log(`🆕 hook detectado e registrado: ${h.name}`)
+    )
+    registry.hooks.push(...registered.hooks)
+    console.log()
+  }
+  if (registered.rules.length > 0) {
+    registered.rules.forEach(r =>
+      console.log(`🆕 rule pack detectado: ${r} (meta injetado)`)
+    )
+    console.log()
+  }
 
   // Gera _index.md legíveis para a IA a partir dos JSONs
   if (!flags.dryRun) {
