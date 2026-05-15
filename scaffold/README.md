@@ -123,7 +123,8 @@ npx harness sync
 │
 ├── adapters/                    ← gerado pelo sync, nunca edite à mão
 │   ├── cursor/
-│   │   └── .cursor/rules/
+│   │   ├── .cursor/rules/
+│   │   └── .cursor/skills/_harness/  ← Agent Skills (espelho de .harness/skills + hooks)
 │   ├── claude-code/
 │   │   └── CLAUDE.md
 │   └── copilot/
@@ -153,6 +154,7 @@ Define quais ferramentas estão ativas e suas capacidades. O sync usa isso para 
       "slash_commands": true,
       "rules_format": "mdc",
       "rules_folder": ".cursor/rules/",
+      "agent_skills_mirror_root": ".cursor/skills/_harness",
       "supports_mcp": true,
       "context_budget": "medium",
       "context_tokens_est": 8000
@@ -183,6 +185,8 @@ Define quais ferramentas estão ativas e suas capacidades. O sync usa isso para 
   }
 }
 ```
+
+- **`tools.cursor.agent_skills_mirror_root`** — caminho relativo à raiz do repo onde o `sync` grava o espelho das Agent Skills (o diretório inteiro é apagado e recriado). Se mudar do padrão, inclua esse caminho no `.gitignore` do projeto.
 
 ### `project-details.json`
 
@@ -510,7 +514,7 @@ npx harness sync
 | Capacidade | Cursor | Claude Code | Copilot |
 |------------|--------|-------------|---------|
 | Slash commands | ✅ | ✅ | ❌ |
-| Rules/context file | ✅ `.mdc` | ✅ `CLAUDE.md` | ✅ `copilot-instructions.md` |
+| Rules/context file | ✅ `.mdc` + Agent Skills em `.cursor/skills/_harness/` | ✅ `CLAUDE.md` | ✅ `copilot-instructions.md` |
 | MCP servers | ✅ | ✅ | ❌ |
 | Bash / terminal | ✅ | ✅ | ❌ |
 | Context budget | Médio (~8k) | Grande (~20k) | Pequeno (~3k) |

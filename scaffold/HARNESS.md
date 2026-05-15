@@ -20,12 +20,20 @@ a trabalharem com maior assertividade, consistência e memória acumulada.
 
 | Arquivo | Quando ler |
 |---------|-----------|
-| `core/rules.md` | Sempre — regras inegociáveis |
+| `core/rules.md` | Sempre — regras do projeto (escopo, validação, convenções) |
 | `core/glossary.md` | Sempre — vocabulário do domínio |
 | `core/context.md` | Na primeira mensagem da sessão |
 | `skills/_index.md` | Ao identificar o domínio da task |
 | `memory/mistakes.md` | Antes de executar qualquer task |
 | `memory/decisions.md` | Antes de decisões arquiteturais |
+
+## Como a IA deve se comportar
+
+- Consulte `skills/_index.md` antes de iniciar uma task com domínio identificável
+- Declare o plano antes de executar — 2 a 3 linhas do que será feito
+- Em caso de ambiguidade, consulte `hooks/on-ambiguity.md` e faça UMA pergunta
+- Nunca avance com suposições silenciosas em pontos críticos
+- Sugestões de melhoria no harness vão para `evolution/proposed/` primeiro
 
 ## O que nunca fazer sem aprovação humana
 

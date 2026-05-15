@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { writeFile, mkdir, readFile, rm, access } from 'fs/promises'
-import { resolve } from 'path'
+import { access, mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
-import type { ToolConfig, ProjectDetails, Registry } from '../../src/types.js'
+import { resolve } from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { ProjectDetails, Registry, ToolConfig } from '../../src/types.js'
 
 const TMP = resolve(tmpdir(), `harness-adapters-test-${Date.now()}`)
 
@@ -46,11 +46,31 @@ async function setupHarness() {
   await mkdir(resolve(harnessDir, 'core'), { recursive: true })
   await mkdir(resolve(harnessDir, 'skills'), { recursive: true })
   await mkdir(resolve(harnessDir, 'hooks'), { recursive: true })
+  await mkdir(resolve(harnessDir, 'skills/test-domain/examples/good'), { recursive: true })
+  await mkdir(resolve(harnessDir, 'skills/_template'), { recursive: true })
 
   // Arquivos essenciais que os adapters leem
   await writeFile(resolve(harnessDir, 'core/rules.md'), '# Regras\n\n- Sempre rodar typecheck\n')
   await writeFile(resolve(harnessDir, 'core/context.md'), '# Context\n\nNestJS + Next.js project\n')
   await writeFile(resolve(harnessDir, 'skills/_index.md'), '# Skills\n\n| nestjs | backend | ~800 | — | /review |\n')
+  await writeFile(
+    resolve(harnessDir, 'skills/test-domain/SKILL.md'),
+    `# Skill: Test Domain
+
+## Quando usar
+
+When testing mirror integration, use this skill.
+
+## Other
+
+Body after first section.
+`,
+  )
+  await writeFile(resolve(harnessDir, 'skills/test-domain/examples/good/sample.txt'), 'sample asset\n')
+  await writeFile(
+    resolve(harnessDir, 'skills/_template/SKILL.md'),
+    `# Skill: Template\n\n## Quando usar\n\nShould not mirror.\n`,
+  )
   await writeFile(resolve(harnessDir, 'hooks/pre-task.md'), '# Pre-Task\n\n- [ ] Escopo claro?\n')
   await writeFile(resolve(harnessDir, 'hooks/on-error.md'), '# On-Error\n\n- Classifique o erro\n')
 
@@ -111,6 +131,7 @@ describe('CursorAdapter', () => {
     slash_commands: true,
     rules_format: 'mdc',
     rules_folder: '.cursor/rules/',
+    agent_skills_mirror_root: '.cursor/skills/_harness',
     supports_mcp: true,
     context_budget: 'medium',
     context_tokens_est: 8000,
@@ -158,6 +179,7 @@ describe('CursorAdapter', () => {
     await adapter.generate()
     const content = await readFile(resolve(TMP, '.cursor/rules/harness-main.mdc'), 'utf-8')
     expect(content).toContain('TestApp')
+    expect(content).toContain('.cursor/skills/_harness')
   })
 
   it('modo dry-run não escreve nenhum arquivo', async () => {
@@ -167,6 +189,9 @@ describe('CursorAdapter', () => {
     expect(result.files.length).toBeGreaterThan(0)
     const exists = await fileExists(resolve(TMP, '.cursor/rules/harness-main.mdc'))
     expect(exists).toBe(false)
+    const mirrorSkill = resolve(TMP, '.cursor/skills/_harness/skills/test-domain/SKILL.md')
+    expect(result.files).toContain(mirrorSkill)
+    expect(await fileExists(mirrorSkill)).toBe(false)
   })
 
   it('retorna lista de arquivos gerados', async () => {
@@ -192,6 +217,75 @@ describe('CursorAdapter', () => {
   skills: [] }
     const adapter = new CursorAdapter(cursorConfig, project, emptyRegistry)
     await expect(adapter.generate()).resolves.toBeDefined()
+  })
+
+  it('espelha skills com frontmatter Cursor e corpo original', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    const skillPath = resolve(TMP, '.cursor/skills/_harness/skills/test-domain/SKILL.md')
+    const content = await readFile(skillPath, 'utf-8')
+    expect(content.startsWith('---\n')).toBe(true)
+    expect(content).toMatch(/name:\s*"test-domain"/)
+    expect(content).toMatch(/description:\s*"When testing mirror integration/)
+    expect(content).toContain('# Skill: Test Domain')
+    expect(content).toContain('## Quando usar')
+  })
+
+  it('copia assets recursivos ao lado de SKILL.md', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    const asset = resolve(TMP, '.cursor/skills/_harness/skills/test-domain/examples/good/sample.txt')
+    expect(await fileExists(asset)).toBe(true)
+    expect(await readFile(asset, 'utf-8')).toContain('sample asset')
+  })
+
+  it('espelha hooks como .../hooks/<nome>/SKILL.md', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    const hookPath = resolve(TMP, '.cursor/skills/_harness/hooks/pre-task/SKILL.md')
+    const content = await readFile(hookPath, 'utf-8')
+    expect(content.startsWith('---\n')).toBe(true)
+    expect(content).toMatch(/name:\s*"pre-task"/)
+    expect(content).toContain('# Pre-Task')
+  })
+
+  it('não espelha skills/_template', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    const templateMirror = resolve(TMP, '.cursor/skills/_harness/skills/_template/SKILL.md')
+    expect(await fileExists(templateMirror)).toBe(false)
+  })
+
+  it('usa agent_skills_mirror_root do config quando customizado', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const customRoot = '.custom/mirror-skills'
+    const adapter = new CursorAdapter(
+      { ...cursorConfig, agent_skills_mirror_root: customRoot },
+      project,
+      registry,
+    )
+    await adapter.generate()
+    const skillPath = resolve(TMP, `${customRoot}/skills/test-domain/SKILL.md`)
+    expect(await fileExists(skillPath)).toBe(true)
+    const main = await readFile(resolve(TMP, '.cursor/rules/harness-main.mdc'), 'utf-8')
+    expect(main).toContain(`${customRoot}/`)
+  })
+
+  it('remove subtree espelhada obsoleta na próxima sync', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    const stale = resolve(TMP, '.cursor/skills/_harness/skills/stale-manual/SKILL.md')
+    await mkdir(resolve(stale, '..'), { recursive: true })
+    await writeFile(stale, '---\nname: stale\n---\n', 'utf-8')
+    expect(await fileExists(stale)).toBe(true)
+    await adapter.generate()
+    expect(await fileExists(stale)).toBe(false)
+    expect(await fileExists(resolve(TMP, '.cursor/skills/_harness/skills/test-domain/SKILL.md'))).toBe(true)
   })
 })
 

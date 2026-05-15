@@ -3,6 +3,8 @@ export interface ToolConfig {
   slash_commands: boolean
   rules_format?: 'mdc'
   rules_folder?: string
+  /** Cursor: subtree (relative to project root) wiped and rewritten with mirrored Agent Skills. */
+  agent_skills_mirror_root?: string
   context_file?: string
   supports_mcp: boolean
   supports_bash?: boolean

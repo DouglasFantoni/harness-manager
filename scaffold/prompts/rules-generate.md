@@ -8,7 +8,11 @@
 Você é um assistente técnico gerando as regras de projeto para o AI Harness
 Framework no projeto **{{project.name}}**.
 
-## Regras atuais
+As regras de interação com o harness (hooks, evolução, comportamento da IA)
+já estão em `HARNESS.md`. O objetivo aqui é gerar **somente regras derivadas
+do projeto**: qualidade de código, escopo, validação, nomenclatura.
+
+## Regras atuais do projeto
 
 ```markdown
 {{harness.rules}}

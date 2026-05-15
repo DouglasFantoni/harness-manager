@@ -34,6 +34,81 @@ npm install && npm run build && npm pack
 # No seu projeto
 pnpm add -D file:../harness-manager/ai-harness-cli-1.0.0.tgz
 ```
+.harness/
+├── harness.config.json          ← quais IAs estão ativas e suas capacidades
+├── project-details.json         ← específico do projeto (gerado no --init)
+├── project-details.example.json ← template para novos projetos
+│
+├── core/
+│   ├── context.md               ← snapshot do projeto (gerado pelo sync)
+│   ├── rules.md                 ← regras globais inegociáveis
+│   └── glossary.md              ← vocabulário do domínio
+│
+├── commands/
+│   ├── _index.md                ← registry com suporte por tool
+│   ├── _template.md             ← como criar um novo comando
+│   ├── shared/                  ← fonte da verdade (agnóstica de IA)
+│   │   ├── audit.md
+│   │   ├── explain.md
+│   │   ├── fix.md
+│   │   ├── refactor.md
+│   │   ├── review.md
+│   │   ├── test.md
+│   │   └── harness-update.md
+│   └── generated/               ← gerado pelo sync, nunca edite à mão
+│       ├── cursor/
+│       └── claude-code/
+│
+├── skills/
+│   ├── _index.md                ← registry com peso de contexto estimado
+│   ├── _template/
+│   │   ├── SKILL.md
+│   │   └── examples/
+│   ├── _self-update/            ← skill especial com safeguards próprios
+│   │   ├── SKILL.md
+│   │   ├── rules.md
+│   │   └── dry-run.md
+│   └── {domain}/
+│       ├── SKILL.md
+│       ├── rules.md             ← restrições específicas (opcional)
+│       └── examples/
+│           ├── good/
+│           └── bad/
+│
+├── hooks/
+│   ├── _index.md
+│   ├── pre-task.md              ← roda ANTES de qualquer task (bloqueia)
+│   ├── post-task.md             ← roda APÓS task concluída
+│   ├── on-error.md              ← roda quando algo falha (bloqueia)
+│   ├── on-ambiguity.md          ← roda quando input é ambíguo (bloqueia)
+│   ├── on-skill-load.md         ← antes de carregar qualquer skill
+│   └── on-command.md            ← antes de executar slash command (bloqueia)
+│
+├── memory/
+│   ├── decisions.md             ← ADRs (architectural decision records)
+│   ├── mistakes.md              ← armadilhas conhecidas e como resolver
+│   ├── patterns.md              ← padrões que funcionaram bem
+│   └── sessions.md              ← log de sessões relevantes
+│
+├── evolution/
+│   ├── feedback.md              ← feedback estruturado de cada sessão
+│   ├── proposed/                ← mudanças sugeridas aguardando aprovação
+│   ├── metrics.md               ← qualidade ao longo do tempo
+│   └── changelog.md             ← histórico de mudanças no harness
+│
+├── adapters/                    ← gerado pelo sync, nunca edite à mão
+│   ├── cursor/
+│   │   ├── .cursor/rules/
+│   │   └── .cursor/skills/_harness/  ← Agent Skills (espelho de .harness/skills + hooks)
+│   ├── claude-code/
+│   │   └── CLAUDE.md
+│   └── copilot/
+│       └── .github/copilot-instructions.md
+│
+└── sync/                        ← o executável do harness
+    ├── index.ts
+    └── lib/
+```
 
 ---
 

@@ -6,6 +6,11 @@ import { detectProject } from '../detector/index.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCAFFOLD = resolve(__dirname, '../../scaffold')
 
+function link(label: string, absolutePath: string): string {
+  if (!process.stdout.isTTY) return label
+  return `\x1b]8;;file://${absolutePath}\x07${label}\x1b]8;;\x07`
+}
+
 function getRoot() { return process.cwd() }
 function harnessDir() { return resolve(getRoot(), '.harness') }
 
@@ -46,13 +51,13 @@ export async function runInit(args: string[]): Promise<void> {
     const { details, reviewHints } = await detectProject()
 
     await writeFile(detailsPath, JSON.stringify(details, null, 2), 'utf-8')
-    console.log('   ✅ project-details.json gerado\n')
+    console.log(`   ✅ ${link('.harness/project-details.json', detailsPath)} gerado\n`)
 
     await patchPackageJson()
     await patchGitignore()
 
-    console.log('\n─────────────────────────────────────────')
-    console.log('⚠️  REVISE .harness/project-details.json antes de continuar:\n')
+    console.log('─────────────────────────────────────────')
+    console.log(`⚠️  REVISE ${link('.harness/project-details.json', detailsPath)} antes de continuar:\n`)
     reviewHints.forEach(hint => console.log(`   • ${hint}`))
     console.log('\n💡  Próximos passos:\n')
     console.log('   1. Revise .harness/project-details.json')
@@ -115,9 +120,9 @@ async function patchPackageJson(): Promise<void> {
 
   if (changed) {
     await writeFile(pkgPath, JSON.stringify(pkg, null, 2) + '\n', 'utf-8')
-    console.log('   ✅ package.json atualizado')
+    console.log(`   ✅ ${link('package.json', pkgPath)} atualizado`)
   } else {
-    console.log('   ✅ package.json já configurado')
+    console.log(`   ✅ ${link('package.json', pkgPath)} já configurado`)
   }
 }
 
@@ -145,12 +150,12 @@ CLAUDE.md
   }
 
   if (current.includes('AI Harness')) {
-    console.log('   ✅ .gitignore já configurado')
+    console.log(`   ✅ ${link('.gitignore', gitignorePath)} já configurado`)
     return
   }
 
   await writeFile(gitignorePath, current + block, 'utf-8')
-  console.log('   ✅ .gitignore atualizado')
+  console.log(`   ✅ ${link('.gitignore', gitignorePath)} atualizado`)
 }
 
 async function fileExists(path: string): Promise<boolean> {

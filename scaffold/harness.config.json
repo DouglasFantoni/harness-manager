@@ -6,6 +6,7 @@
       "slash_commands": true,
       "rules_format": "mdc",
       "rules_folder": ".cursor/rules/",
+      "agent_skills_mirror_root": ".cursor/skills/_harness",
       "supports_mcp": true,
       "context_budget": "medium",
       "context_tokens_est": 8000

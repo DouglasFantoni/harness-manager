@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { writeFile, mkdir, readFile, rm, access } from 'fs/promises'
-import { resolve } from 'path'
+import { access, mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
+import { resolve } from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const TMP = resolve(tmpdir(), `harness-sync-test-${Date.now()}`)
 
@@ -14,6 +14,7 @@ const config = {
       slash_commands: true,
       rules_format: 'mdc',
       rules_folder: '.cursor/rules/',
+      agent_skills_mirror_root: '.cursor/skills/_harness',
       supports_mcp: true,
       context_budget: 'medium',
       context_tokens_est: 8000,

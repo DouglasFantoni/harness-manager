@@ -1,9 +1,10 @@
-import { readFile, writeFile, mkdir } from 'fs/promises'
-import { resolve } from 'path'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import matter from 'gray-matter'
+import { resolve } from 'path'
+import { DEFAULT_AGENT_SKILLS_MIRROR_ROOT } from '../config.js'
 import { resolvePlaceholders } from '../resolver.js'
-import { loadAllRules } from '../harness-utils.js'
-import type { ToolConfig, ProjectDetails, Registry, AdapterResult } from '../types.js'
+import type { AdapterResult, ProjectDetails, Registry, ToolConfig } from '../types.js'
+import { mirrorHarnessAgentSkills } from './cursor-mirror-skills.js'
 
 function getRoot() { return process.cwd() }
 function harnessRoot() { return resolve(getRoot(), '.harness') }
@@ -17,7 +18,16 @@ export class CursorAdapter {
 
   async generate(dryRun = false): Promise<AdapterResult> {
     const files: string[] = []
-    const rulesDir = resolve(getRoot(), this.toolConfig.rules_folder!)
+    const root = getRoot()
+    const rulesDir = resolve(root, this.toolConfig.rules_folder!)
+
+    const mirrorRootRel = this.agentSkillsMirrorRootRel()
+    const mirrorFiles = await mirrorHarnessAgentSkills({
+      projectRoot: root,
+      mirrorRootRel,
+      dryRun,
+    })
+    files.push(...mirrorFiles)
 
     if (!dryRun) {
       await mkdir(rulesDir, { recursive: true })
@@ -86,6 +96,14 @@ export class CursorAdapter {
     return { files }
   }
 
+  /** Normalized relative path; matches `tools.cursor.agent_skills_mirror_root` in harness.config.json. */
+  private agentSkillsMirrorRootRel(): string {
+    const raw = this.toolConfig.agent_skills_mirror_root
+    if (raw === undefined || raw === null) return DEFAULT_AGENT_SKILLS_MIRROR_ROOT
+    const s = raw.trim().replace(/\/+$/, '')
+    return s || DEFAULT_AGENT_SKILLS_MIRROR_ROOT
+  }
+
   private async buildMainRule(): Promise<string> {
     const rulesContent = await loadAllRules(harnessRoot())
 
@@ -95,8 +113,11 @@ export class CursorAdapter {
       globs: [],
       content: `# Harness — ${this.project.project.name}
 
+**Fonte canônica:** edite skills e hooks em \`.harness/skills/\` e \`.harness/hooks/\`, depois rode \`harness sync\`.
+
 Antes de qualquer task, consulte \`.harness/hooks/pre-task.md\`.
-Skills disponíveis em \`.harness/skills/_index.md\`.
+Índice de skills: \`.harness/skills/_index.md\`.
+Cópias para Agent Skills do Cursor (layout nativo, geradas): \`${this.agentSkillsMirrorRootRel()}/\` — não edite à mão (caminho em \`harness.config.json\` → \`tools.cursor.agent_skills_mirror_root\`).
 Em caso de erro: \`.harness/hooks/on-error.md\`.
 
 ${rulesContent.trim()}`,

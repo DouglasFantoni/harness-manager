@@ -61,7 +61,7 @@ Commands como `/review`, `/fix`, `/refactor`, `/test`, `/audit`, `/harness-updat
 
 O `harness sync` lê esses arquivos e gera o formato certo para cada tool ativa:
 
-- **Cursor** → `.cursor/rules/cmd-review.mdc`
+- **Cursor** → `.cursor/rules/cmd-review.mdc` (Project Rules) e **Agent Skills** em `.cursor/skills/_harness/` (espelho com frontmatter nativo do Cursor a partir de `.harness/skills/*/SKILL.md` e `.harness/hooks/*.md`). Tudo sob `_harness/` é reescrito a cada sync; a fonte editável continua sendo `.harness/`.
 - **Claude Code** → seção no `CLAUDE.md`
 - **Copilot** → resumo no `copilot-instructions.md`
 
@@ -102,7 +102,7 @@ harness sync
 
 Gera um `project-details.json` preenchido e **para para pedir revisão** antes de fazer qualquer outra coisa. Sem suposições silenciosas.
 
-**`sync`** lê `harness.config.json` e `project-details.json`, resolve `{{placeholders}}` como `{{commands.typecheck}}` → `pnpm typecheck` e escreve os arquivos de adapter para cada tool ativa.
+**`sync`** lê `harness.config.json` e `project-details.json`, resolve `{{placeholders}}` como `{{commands.typecheck}}` → `pnpm typecheck` e escreve os arquivos de adapter para cada tool ativa. Com Cursor ativo, o subtree em `tools.cursor.agent_skills_mirror_root` (padrão `.cursor/skills/_harness`) é apagado e recriado a partir de `.harness/skills/` e `.harness/hooks/` — edite sempre a cópia em `.harness/` e rode `harness sync` de novo.
 
 ---
 
@@ -113,7 +113,7 @@ Você abre o Cursor
         │
         ▼
 IA carrega harness-main.mdc (alwaysApply: true)
-Lê: core/rules.md + core/glossary.md
+Lê: core/rules.md + core/glossary.md; skills/hooks canônicos em `.harness/` e cópias em `.cursor/skills/_harness/` (rode `harness sync` após editar `.harness/`)
         │
         ▼
 Você descreve uma task

@@ -1,7 +1,7 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { writeFile, mkdir, rm } from 'fs/promises'
-import { resolve } from 'path'
+import { mkdir, rm, writeFile } from 'fs/promises'
 import { tmpdir } from 'os'
+import { resolve } from 'path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // loadConfig usa process.cwd() internamente — precisamos mockar
 const TMP = resolve(tmpdir(), `harness-config-test-${Date.now()}`)
@@ -15,6 +15,7 @@ const validConfig = {
       slash_commands: true,
       rules_format: 'mdc',
       rules_folder: '.cursor/rules/',
+      agent_skills_mirror_root: '.cursor/skills/_harness',
       supports_mcp: true,
       context_budget: 'medium',
       context_tokens_est: 8000,
@@ -164,6 +165,32 @@ describe('loadConfig', () => {
       const { loadConfig } = await import('../../src/config.js')
       await expect(loadConfig()).resolves.toBeDefined()
       expect(warns.some(w => w.includes('lint'))).toBe(true)
+    })
+
+    it('rejeita agent_skills_mirror_root com ..', async () => {
+      const bad = {
+        ...validConfig,
+        tools: {
+          ...validConfig.tools,
+          cursor: { ...validConfig.tools.cursor, agent_skills_mirror_root: '.cursor/../etc/passwd' },
+        },
+      }
+      await writeHarness(bad, validProject)
+      const { loadConfig } = await import('../../src/config.js')
+      await expect(loadConfig()).rejects.toThrow('agent_skills_mirror_root')
+    })
+
+    it('rejeita agent_skills_mirror_root absoluto', async () => {
+      const bad = {
+        ...validConfig,
+        tools: {
+          ...validConfig.tools,
+          cursor: { ...validConfig.tools.cursor, agent_skills_mirror_root: '/tmp/harness-mirror' },
+        },
+      }
+      await writeHarness(bad, validProject)
+      const { loadConfig } = await import('../../src/config.js')
+      await expect(loadConfig()).rejects.toThrow('relativo')
     })
   })
 })
