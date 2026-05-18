@@ -1,0 +1,14 @@
+{
+  "version": "1.0.0",
+  "skills": [
+    { "name": "nestjs", "version": "1.0.0", "domain": "backend" },
+    { "name": "nextjs", "version": "1.0.0", "domain": "frontend" },
+    { "name": "payroll", "version": "1.0.0", "domain": "domain" }
+  ],
+  "rule_packs": [
+    { "name": "typescript", "version": "1.0.0" },
+    { "name": "nestjs", "version": "1.0.0" },
+    { "name": "security", "version": "1.0.0" },
+    { "name": "git", "version": "1.0.0" }
+  ]
+}

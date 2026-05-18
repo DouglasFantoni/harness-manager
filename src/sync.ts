@@ -1,14 +1,15 @@
 import { relative } from 'path'
+import { ClaudeCodeAdapter } from './adapters/claude-code.js'
+import { CopilotAdapter } from './adapters/copilot.js'
+import { CursorAdapter } from './adapters/cursor.js'
+import { autoRegister } from './auto-register.js'
 import { loadConfig } from './config.js'
-import { generateSkillMinFiles } from './skill-minifier.js'
+import { printContextBudgetWarnings } from './context-budget.js'
 import { generateContext } from './context-gen.js'
+import { generateIndexFiles } from './index-generator.js'
 import { loadRegistry } from './registry.js'
 import { resetWarnings } from './resolver.js'
-import { generateIndexFiles } from './index-generator.js'
-import { autoRegister } from './auto-register.js'
-import { ClaudeCodeAdapter } from './adapters/claude-code.js'
-import { CursorAdapter } from './adapters/cursor.js'
-import { CopilotAdapter } from './adapters/copilot.js'
+import { generateSkillMinFiles } from './skill-minifier.js'
 import type { SyncFlags } from './types.js'
 
 const ADAPTERS = {
@@ -121,6 +122,10 @@ export async function runSync(flags: SyncFlags): Promise<void> {
     if (!flags.only) {
       console.log(`⏭️  ${toolName}: desabilitado em harness.config.json`)
     }
+  }
+
+  if (!flags.dryRun) {
+    await printContextBudgetWarnings(config)
   }
 
   console.log('\n✨ harness sync concluído')

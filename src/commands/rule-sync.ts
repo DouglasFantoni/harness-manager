@@ -1,13 +1,22 @@
-import { readFile, writeFile, mkdir, access, readdir } from 'fs/promises'
+import { access, mkdir, readdir, readFile, writeFile } from 'fs/promises'
 import { resolve } from 'path'
+import {
+    compareSemver,
+    fetchRegistryText,
+    formatSemverWarning,
+    loadRegistryConfig,
+    localInstallName,
+    parsePackageRef,
+    resolveRuleChangelogUrl,
+    resolveRulePackUrl,
+    scopeTokenEnv,
+} from '../registry-remote.js'
 
 function harnessDir()  { return resolve(process.cwd(), '.harness') }
 function rulesDir()    { return resolve(harnessDir(), 'core/rules') }
 
 const CUSTOM_START = '<!-- HARNESS:CUSTOM:START -->'
 const CUSTOM_END   = '<!-- HARNESS:CUSTOM:END -->'
-
-const REGISTRY_BASE = 'https://raw.githubusercontent.com/DouglasFantoni/harness-manager/main/registry/rules'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +26,7 @@ interface RuleMeta {
   category?: string
   synced_at?: string
   sync?: boolean
+  registry_ref?: string
 }
 
 interface SyncResult {
@@ -47,32 +57,44 @@ export async function runRuleSync(args: string[]): Promise<void> {
 }
 
 export async function runRuleAdd(args: string[]): Promise<void> {
-  const name = args[0]
+  const input = args[0]
 
-  if (!name) {
-    console.error('❌ Informe o nome do rule pack: harness rule-add <nome>')
-    console.log('\n   Packs disponíveis: typescript, nestjs, security, git')
+  if (!input) {
+    console.error('❌ Informe o pack: harness rule-add <nome> | @escopo/nome> | <url>')
+    const cfg = await loadRegistryConfig()
+    console.log(`\n   Registry oficial: ${cfg.rules_base_url}`)
     process.exit(1)
   }
 
-  const url      = `${REGISTRY_BASE}/${name}.md`
-  const destPath = resolve(rulesDir(), `${name}.md`)
+  const registryConfig = await loadRegistryConfig()
+  let ref: ReturnType<typeof parsePackageRef>
+  let url: string
+
+  try {
+    ref = parsePackageRef(input)
+    url = resolveRulePackUrl(input, registryConfig)
+  } catch (err: unknown) {
+    console.error(`❌ ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+
+  const installName = localInstallName(ref)
+  const destPath = resolve(rulesDir(), `${installName}.md`)
 
   if (await fileExists(destPath)) {
-    console.log(`⚠️  Rule pack "${name}" já existe em .harness/core/rules/${name}.md`)
-    console.log('   Para atualizar: harness rule-sync ' + name)
+    console.log(`⚠️  Rule pack já existe em .harness/core/rules/${installName}.md`)
+    console.log('   Para atualizar: harness rule-sync ' + installName)
     return
   }
 
-  console.log(`📥 Buscando rule pack "${name}" da registry...\n`)
+  console.log(`📥 Buscando rule pack "${input}" da registry...\n`)
 
   let remote: string
   try {
-    remote = await fetchRemote(url)
+    remote = await fetchRegistryText(url, { tokenEnv: scopeTokenEnv(ref, registryConfig) })
   } catch {
-    console.error(`❌ Rule pack "${name}" não encontrado na registry.`)
+    console.error(`❌ Rule pack "${input}" não encontrado na registry.`)
     console.log(`   URL tentada: ${url}`)
-    console.log('\n   Packs disponíveis: typescript, nestjs, security, git')
     process.exit(1)
   }
 
@@ -83,12 +105,14 @@ export async function runRuleAdd(args: string[]): Promise<void> {
     version: version ?? undefined,
     synced_at: today(),
     sync: true,
+    registry_ref: ref.raw,
   })
 
   await mkdir(rulesDir(), { recursive: true })
   await writeFile(destPath, withMeta, 'utf-8')
 
-  console.log(`✅ Rule pack "${name}" instalado em .harness/core/rules/${name}.md`)
+  console.log(`✅ Rule pack instalado em .harness/core/rules/${installName}.md`)
+  console.log(`   Referência: ${ref.raw}`)
   console.log(`   Versão: ${version ?? 'desconhecida'}`)
   console.log('\n   Para customizar, edite a seção:')
   console.log('   ## Customizações do projeto')
@@ -123,20 +147,29 @@ async function syncPack(name: string, dryRun: boolean): Promise<SyncResult> {
     return { pack: name, status: 'no-source' }
   }
 
+  const registryConfig = await loadRegistryConfig()
   let remote: string
   try {
-    remote = await fetchRemote(meta.source)
-  } catch (err: any) {
-    return { pack: name, status: 'error', error: err.message }
+    remote = await fetchRegistryText(meta.source, {
+      tokenEnv: tokenEnvForRuleMeta(meta, registryConfig),
+    })
+  } catch (err: unknown) {
+    return { pack: name, status: 'error', error: err instanceof Error ? err.message : String(err) }
   }
 
   const remoteVersion: string | undefined = extractVersion(remote) ?? undefined
+  const semver = compareSemver(meta.version, remoteVersion)
 
   if (meta.version && remoteVersion === meta.version) {
     return { pack: name, status: 'up-to-date', fromVersion: meta.version }
   }
 
   if (!dryRun) {
+    const warning = formatSemverWarning(name, meta.version, remoteVersion, semver)
+    if (warning) {
+      console.log(warning)
+      await logRuleChangelogIfPresent(meta.source, registryConfig, meta)
+    }
     const merged = mergePack(local, remote, meta)
     await writeFile(packPath, merged, 'utf-8')
   }
@@ -168,11 +201,16 @@ async function checkUpdates(target?: string): Promise<void> {
     }
 
     try {
-      const remote = await fetchRemote(meta.source)
+      const registryConfig = await loadRegistryConfig()
+      const remote = await fetchRegistryText(meta.source, {
+        tokenEnv: tokenEnvForRuleMeta(meta, registryConfig),
+      })
       const remoteVersion = extractVersion(remote)
+      const semver = compareSemver(meta.version, remoteVersion)
 
       if (remoteVersion && remoteVersion !== meta.version) {
-        console.log(`   🆕 ${name}: ${meta.version ?? '?'} → ${remoteVersion}`)
+        const majorTag = semver.breaking ? ' ⚠️ MAJOR' : ''
+        console.log(`   🆕 ${name}: ${meta.version ?? '?'} → ${remoteVersion}${majorTag}`)
         hasUpdates = true
       } else {
         console.log(`   ✅ ${name}: atualizado (${meta.version ?? '?'})`)
@@ -198,6 +236,7 @@ function mergePack(local: string, remote: string, localMeta: RuleMeta): string {
     version: remoteVersion ?? localMeta.version,
     synced_at: today(),
     sync: localMeta.sync ?? true,
+    registry_ref: localMeta.registry_ref,
   })
 
   return injectCustomBlock(merged, customBlock)
@@ -238,11 +277,12 @@ function extractMeta(content: string): RuleMeta {
   for (const line of match[1].split('\n')) {
     const [key, ...rest] = line.split(':')
     const value = rest.join(':').trim().replace(/['"]/g, '')
-    if (key?.trim() === 'source')    meta.source    = value
-    if (key?.trim() === 'version')   meta.version   = value
-    if (key?.trim() === 'category')  meta.category  = value
-    if (key?.trim() === 'synced_at') meta.synced_at = value
-    if (key?.trim() === 'sync')      meta.sync      = value !== 'false'
+    if (key?.trim() === 'source')        meta.source        = value
+    if (key?.trim() === 'version')       meta.version       = value
+    if (key?.trim() === 'category')      meta.category      = value
+    if (key?.trim() === 'synced_at')     meta.synced_at     = value
+    if (key?.trim() === 'registry_ref')  meta.registry_ref  = value
+    if (key?.trim() === 'sync')          meta.sync          = value !== 'false'
   }
   return meta
 }
@@ -259,7 +299,7 @@ function injectLocalMeta(content: string, localMeta: RuleMeta): string {
 
   const filtered = lines.filter(l => {
     const key = l.split(':')[0]?.trim()
-    return !['source', 'sync', 'synced_at'].includes(key)
+    return !['source', 'sync', 'synced_at', 'registry_ref'].includes(key)
   })
 
   const withVersion = filtered.map(l =>
@@ -269,7 +309,8 @@ function injectLocalMeta(content: string, localMeta: RuleMeta): string {
   )
 
   const localFields = [
-    localMeta.source    && `source: "${localMeta.source}"`,
+    localMeta.source && `source: "${localMeta.source}"`,
+    localMeta.registry_ref && `registry_ref: "${localMeta.registry_ref}"`,
     localMeta.synced_at && `synced_at: "${localMeta.synced_at}"`,
     `sync: ${localMeta.sync ?? true}`,
   ].filter(Boolean) as string[]
@@ -325,10 +366,36 @@ async function listRulePacks(): Promise<string[]> {
   }
 }
 
-async function fetchRemote(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.text()
+function tokenEnvForRuleMeta(
+  meta: RuleMeta,
+  config: Awaited<ReturnType<typeof loadRegistryConfig>>,
+): string | undefined {
+  if (!meta.registry_ref) return undefined
+  try {
+    const ref = parsePackageRef(meta.registry_ref)
+    return scopeTokenEnv(ref, config)
+  } catch {
+    return undefined
+  }
+}
+
+async function logRuleChangelogIfPresent(
+  sourceUrl: string | undefined,
+  config: Awaited<ReturnType<typeof loadRegistryConfig>>,
+  meta: RuleMeta,
+): Promise<void> {
+  if (!sourceUrl) return
+  const changelogUrl = resolveRuleChangelogUrl(sourceUrl)
+  if (!changelogUrl) return
+  try {
+    const body = await fetchRegistryText(changelogUrl, {
+      tokenEnv: tokenEnvForRuleMeta(meta, config),
+    })
+    const preview = body.trim().split('\n').slice(0, 12).join('\n')
+    console.log(`\n   CHANGELOG (preview):\n${preview}\n`)
+  } catch {
+    // optional
+  }
 }
 
 async function fileExists(path: string): Promise<boolean> {

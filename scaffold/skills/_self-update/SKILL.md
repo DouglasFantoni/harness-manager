@@ -26,7 +26,7 @@ Esta skill nunca é carregada como efeito colateral de outra task.
 
 O harness evolui por ação explícita do usuário, nunca automaticamente.
 Todo aprendizado passa por aprovação antes de ser aplicado.
-O ciclo é: propor diff → salvar em `evolution/proposed/` → aguardar aprovação → aplicar → sync.
+O ciclo é: propor diff → `evolution/proposed/` → aguardar aprovação → `harness proposals apply` → sync.
 
 ## Regras
 

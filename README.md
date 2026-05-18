@@ -142,6 +142,12 @@ harness sync                    # regenera adapters para tools ativas
 harness sync --dry-run          # preview sem escrever
 harness sync --only cursor      # só uma tool
 harness sync --force-context    # força regeneração do context.md
+harness sync --watch            # observa .harness/ e re-sincroniza
+
+# Memory
+harness memory status             # tokens por arquivo de memory
+harness memory summarize          # prompt de condensação se acima do limite
+harness memory summarize --backup # cria *.bak.md antes de editar
 
 # Skills da registry
 harness skill-add nestjs        # instala skill da registry oficial
@@ -250,7 +256,11 @@ O sync reporta métricas reais usando `js-tiktoken`:
 
 - **`SKILL.min.md`** gerado automaticamente — remove Meta, Checklist e Referências (30-50% de redução)
 - **Lazy loading por glob** — Cursor carrega skills só quando o arquivo aberto corresponde ao padrão
-- **`harness prompt memory-summarize`** — condensa memory quando crescer demais
+- **Budget de contexto no sync** — alerta se hooks ultrapassam 20% do `context_tokens_est` de cada tool ativa
+- **`harness memory status`** — contagem de tokens em `mistakes.md`, `patterns.md`, `decisions.md`
+- **`harness memory summarize`** — imprime o prompt de condensação quando memory passa do limite (padrão: 1200/file, 3000 total)
+- **`harness sync --watch`** — re-sincroniza adapters quando `.harness/` muda (útil ao editar skills/hooks)
+- **`harness prompt memory-summarize`** — mesmo prompt, sem checagem de threshold
 
 ---
 

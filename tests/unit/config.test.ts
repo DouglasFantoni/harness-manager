@@ -192,5 +192,15 @@ describe('loadConfig', () => {
       const { loadConfig } = await import('../../src/config.js')
       await expect(loadConfig()).rejects.toThrow('relativo')
     })
+
+    it('rejeita registry.skills_base_url inválida', async () => {
+      const bad = {
+        ...validConfig,
+        registry: { skills_base_url: 'not-a-url', rules_base_url: 'https://example.com/rules' },
+      }
+      await writeHarness(bad, validProject)
+      const { loadConfig } = await import('../../src/config.js')
+      await expect(loadConfig()).rejects.toThrow('skills_base_url')
+    })
   })
 })

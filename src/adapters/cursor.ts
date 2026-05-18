@@ -2,9 +2,12 @@ import { mkdir, readFile, writeFile } from 'fs/promises'
 import matter from 'gray-matter'
 import { resolve } from 'path'
 import { DEFAULT_AGENT_SKILLS_MIRROR_ROOT } from '../config.js'
+import { loadAllRules } from '../harness-utils.js'
 import { resolvePlaceholders } from '../resolver.js'
 import type { AdapterResult, ProjectDetails, Registry, ToolConfig } from '../types.js'
+import { generateCursorHooks } from './cursor-hooks.js'
 import { mirrorHarnessAgentSkills } from './cursor-mirror-skills.js'
+import { generateMcpRecommended } from './mcp-recommended.js'
 
 function getRoot() { return process.cwd() }
 function harnessRoot() { return resolve(getRoot(), '.harness') }
@@ -28,6 +31,18 @@ export class CursorAdapter {
       dryRun,
     })
     files.push(...mirrorFiles)
+
+    const hookFiles = await generateCursorHooks({
+      projectRoot: root,
+      harnessHooks: this.registry.hooks,
+      dryRun,
+    })
+    files.push(...hookFiles)
+
+    if (this.toolConfig.supports_mcp) {
+      const mcp = await generateMcpRecommended({ projectRoot: root, dryRun })
+      files.push(mcp.jsonPath, mcp.docPath)
+    }
 
     if (!dryRun) {
       await mkdir(rulesDir, { recursive: true })
@@ -119,6 +134,8 @@ Antes de qualquer task, consulte \`.harness/hooks/pre-task.md\`.
 Índice de skills: \`.harness/skills/_index.md\`.
 Cópias para Agent Skills do Cursor (layout nativo, geradas): \`${this.agentSkillsMirrorRootRel()}/\` — não edite à mão (caminho em \`harness.config.json\` → \`tools.cursor.agent_skills_mirror_root\`).
 Em caso de erro: \`.harness/hooks/on-error.md\`.
+Hooks executáveis (prompt): \`.cursor/hooks.json\` (gerado do harness; entradas \`_harness\` são substituídas no sync).
+${this.toolConfig.supports_mcp ? 'MCP recomendado: `.cursor/MCP-RECOMMENDED.md` e template `.cursor/mcp.recommended.json` (copie para `mcp.json`).' : ''}
 
 ${rulesContent.trim()}`,
     })

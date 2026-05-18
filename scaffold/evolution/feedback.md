@@ -2,7 +2,7 @@
 
 > Registro estruturado de cada sessão que usou skill ou command.
 > Alimenta métricas de assertividade e identifica skills que precisam de atualização.
-> Preenchido pelo `post-task` ao final de cada sessão relevante.
+> Preenchido pelo `post-task` ou via `harness feedback add` (recomendado).
 
 ## Formato de entrada
 
@@ -20,4 +20,4 @@
 
 # Entradas
 
-<!-- Adicionadas automaticamente pelo post-task hook. -->
+<!-- harness feedback add | post-task hook -->

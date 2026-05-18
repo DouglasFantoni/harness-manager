@@ -18,14 +18,20 @@ Algo novo foi aprendido? Identifique a categoria e registre:
 | Padrão que funcionou bem | `memory/patterns.md` |
 | Decisão arquitetural tomada | `memory/decisions.md` |
 | Termo novo do domínio | `core/glossary.md` |
-| Skill desatualizada ou incompleta | Propor diff em `evolution/proposed/` |
+| Skill desatualizada ou incompleta | `harness proposals propose` → `evolution/proposed/` |
 
 > Não force uma entrada se não houve aprendizado genuíno.
 > Uma entrada vazia é melhor que ruído.
 
 ## 3. Registro em `evolution/feedback.md`
 
-Sempre que a task envolver skill ou command, registre:
+Sempre que a task envolver skill ou command, registre (preferir CLI quando possível):
+
+```bash
+harness feedback add --task "..." --outcome success --confidence 4 --skill <nome> --command </cmd>
+```
+
+Ou append manual:
 
 ```yaml
 - date: YYYY-MM-DD

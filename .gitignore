@@ -2,6 +2,8 @@ node_modules/
 dist/
 *.tsbuildinfo
 .turbo
+# Pacotes .tgz apenas na raiz do repo
+/*.tgz
 # Harness — gerado pelo sync (nos projetos que usam o harness)
 CLAUDE.md
 .cursor/rules/

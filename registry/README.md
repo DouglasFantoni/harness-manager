@@ -2,6 +2,20 @@
 
 Skills oficiais do AI Harness Framework, mantidas e otimizadas ao longo do tempo.
 
+## Remote registry
+
+Por padrão, `harness skill-add` e `harness rule-add` buscam deste repositório via GitHub raw.
+Você pode apontar para outra URL ou registry privada em `.harness/harness.config.json` → `registry`.
+
+```bash
+harness skill-add nestjs              # oficial
+harness skill-add @myorg/payroll      # scope em registry.scopes
+harness skill-add https://.../SKILL.md  # URL direta
+```
+
+Política de versões e breaking changes: [VERSIONING.md](./VERSIONING.md)  
+Índice de pacotes: [manifest.json](./manifest.json)
+
 ## Como instalar uma skill
 
 ```bash

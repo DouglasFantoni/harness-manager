@@ -1,7 +1,7 @@
 # Métricas de Assertividade
 
 > Consolidação periódica dos dados de `feedback.md`.
-> Atualizado manualmente ou via `/harness-update` quando há dados suficientes.
+> Atualize com `harness metrics --write` (intervalo em `harness.config.json` → `evolution.metrics_interval_days`).
 
 ## Como interpretar
 

@@ -1,9 +1,15 @@
 #!/usr/bin/env node
+import { runEvolution } from './commands/evolution.js'
+import { runFeedback } from './commands/feedback.js'
 import { runInit } from './commands/init.js'
-import { runSync } from './sync.js'
+import { runMemory } from './commands/memory.js'
+import { runMetrics } from './commands/metrics.js'
 import { runPrompt } from './commands/prompt.js'
-import { runSkillSync, runSkillAdd } from './commands/skill-sync.js'
-import { runRuleSync, runRuleAdd } from './commands/rule-sync.js'
+import { runProposals } from './commands/proposals.js'
+import { runRuleAdd, runRuleSync } from './commands/rule-sync.js'
+import { runSkillAdd, runSkillSync } from './commands/skill-sync.js'
+import { runSyncWatch } from './sync-watch.js'
+import { runSync } from './sync.js'
 
 const [,, command, ...args] = process.argv
 
@@ -16,21 +22,38 @@ const USAGE = `
     harness sync --only cursor           Only generate for one tool
     harness sync --only claude-code
     harness sync --force-context         Force context.md regeneration
+    harness sync --watch                 Re-run sync when .harness/ changes
+
+    harness memory status                Token counts for memory/*.md
+    harness memory summarize [--backup]  AI summarize prompt when over threshold
 
     harness prompt <nome>                Exibe prompt pronto para copiar e colar na IA
     harness prompt --list                Lista todos os prompts disponíveis
 
-    harness skill-add <nome>             Instala skill da registry oficial
+    harness skill-add <nome|@scope/nome|url>  Instala skill (registry oficial, scope ou URL)
     harness skill-sync                   Atualiza todas as skills com source
     harness skill-sync <nome>            Atualiza uma skill específica
     harness skill-sync --check           Mostra quais têm update disponível
     harness skill-sync --dry-run         Mostra diff sem aplicar
 
-    harness rule-add <nome>              Instala rule pack da registry oficial
+    harness rule-add <nome|@scope/nome|url>   Instala rule pack (registry oficial, scope ou URL)
     harness rule-sync                    Atualiza todos os rule packs com source
     harness rule-sync <nome>             Atualiza um rule pack específico
     harness rule-sync --check            Mostra quais têm update disponível
     harness rule-sync --dry-run          Mostra diff sem aplicar
+
+    harness feedback add --task "..." --outcome success --confidence 4
+    harness feedback list [--since 7] [--json]
+
+    harness metrics [--write] [--check] [--since 30]
+    harness evolution status
+    harness evolution review
+
+    harness proposals propose --target memory/mistakes.md --title "..." --body "..."
+    harness proposals list [--status pending]
+    harness proposals show <id>
+    harness proposals apply <id> [--yes]
+    harness proposals reject <id> [--reason "..."]
 `
 
 
@@ -80,11 +103,42 @@ async function main() {
   }
 
   if (command === 'sync') {
-    await runSync({
+    const flags = {
       dryRun: args.includes('--dry-run'),
       forceContext: args.includes('--force-context'),
       only: parseFlag(args, '--only'),
-    })
+      watch: args.includes('--watch'),
+    }
+    if (flags.watch) {
+      await runSyncWatch(flags)
+    } else {
+      await runSync(flags)
+    }
+    return
+  }
+
+  if (command === 'memory') {
+    await runMemory(args)
+    return
+  }
+
+  if (command === 'feedback') {
+    await runFeedback(args)
+    return
+  }
+
+  if (command === 'metrics') {
+    await runMetrics(args)
+    return
+  }
+
+  if (command === 'evolution') {
+    await runEvolution(args)
+    return
+  }
+
+  if (command === 'proposals') {
+    await runProposals(args)
     return
   }
 

@@ -24,6 +24,7 @@
       "enabled": false,
       "slash_commands": false,
       "context_file": ".github/copilot-instructions.md",
+      "copilot_mirror_root": ".github/harness",
       "supports_mcp": false,
       "context_budget": "small",
       "context_tokens_est": 3000
@@ -42,5 +43,11 @@
       "evolution/",
       "adapters/"
     ]
+  },
+  "evolution": {
+    "metrics_interval_days": 7,
+    "proposals_interval_days": 14,
+    "last_metrics_at": null,
+    "last_proposals_review_at": null
   }
 }

@@ -1,9 +1,13 @@
 import { readFile } from 'fs/promises'
 import { resolve } from 'path'
-import type { HarnessConfig, ProjectDetails } from './types.js'
+import { validateEvolutionConfig } from './evolution/config.js'
+import type { HarnessConfig, ProjectDetails, RegistryConfig } from './types.js'
 
 /** Default when `tools.cursor.agent_skills_mirror_root` is omitted (older configs). */
 export const DEFAULT_AGENT_SKILLS_MIRROR_ROOT = '.cursor/skills/_harness'
+
+/** Default when `tools.copilot.copilot_mirror_root` is omitted. */
+export const DEFAULT_COPILOT_MIRROR_ROOT = '.github/harness'
 
 function harnessRoot() {
   return resolve(process.cwd(), '.harness')
@@ -29,16 +33,45 @@ export async function loadConfig(): Promise<{ config: HarnessConfig; project: Pr
   return { config, project }
 }
 
-function validateAgentSkillsMirrorRoot(raw: string): void {
+function validateRelativePath(raw: string, field: string): void {
   const s = raw.trim().replace(/\/+$/, '')
   if (!s) {
-    throw new Error('harness.config.json: tools.cursor.agent_skills_mirror_root não pode ser vazio')
+    throw new Error(`harness.config.json: ${field} não pode ser vazio`)
   }
   if (s.startsWith('/')) {
-    throw new Error('harness.config.json: tools.cursor.agent_skills_mirror_root deve ser relativo à raiz do projeto (sem / inicial)')
+    throw new Error(`harness.config.json: ${field} deve ser relativo à raiz do projeto (sem / inicial)`)
   }
   if (s.split('/').includes('..')) {
-    throw new Error('harness.config.json: tools.cursor.agent_skills_mirror_root não pode conter ".."')
+    throw new Error(`harness.config.json: ${field} não pode conter ".."`)
+  }
+}
+
+function validateRegistryConfig(registry: RegistryConfig | undefined): void {
+  if (!registry) return
+
+  if (registry.skills_base_url) {
+    validateRegistryUrl(registry.skills_base_url, 'registry.skills_base_url')
+  }
+  if (registry.rules_base_url) {
+    validateRegistryUrl(registry.rules_base_url, 'registry.rules_base_url')
+  }
+  if (registry.manifest_url) {
+    validateRegistryUrl(registry.manifest_url, 'registry.manifest_url')
+  }
+
+  for (const [scope, cfg] of Object.entries(registry.scopes ?? {})) {
+    if (cfg.skills_base_url) {
+      validateRegistryUrl(cfg.skills_base_url, `registry.scopes.${scope}.skills_base_url`)
+    }
+    if (cfg.rules_base_url) {
+      validateRegistryUrl(cfg.rules_base_url, `registry.scopes.${scope}.rules_base_url`)
+    }
+  }
+}
+
+function validateRegistryUrl(url: string, field: string): void {
+  if (!/^https?:\/\//i.test(url.trim())) {
+    throw new Error(`harness.config.json: ${field} deve ser uma URL http(s)`)
   }
 }
 
@@ -55,8 +88,19 @@ function validate(config: HarnessConfig, project: ProjectDetails): void {
     if (typeof cursor.agent_skills_mirror_root !== 'string') {
       throw new Error('harness.config.json: tools.cursor.agent_skills_mirror_root deve ser uma string')
     }
-    validateAgentSkillsMirrorRoot(cursor.agent_skills_mirror_root)
+    validateRelativePath(cursor.agent_skills_mirror_root, 'tools.cursor.agent_skills_mirror_root')
   }
+
+  const copilot = config.tools.copilot
+  if (copilot && copilot.copilot_mirror_root !== undefined) {
+    if (typeof copilot.copilot_mirror_root !== 'string') {
+      throw new Error('harness.config.json: tools.copilot.copilot_mirror_root deve ser uma string')
+    }
+    validateRelativePath(copilot.copilot_mirror_root, 'tools.copilot.copilot_mirror_root')
+  }
+
+  validateEvolutionConfig(config)
+  validateRegistryConfig(config.registry)
 
   const required = ['lint', 'typecheck', 'test', 'build'] as const
   for (const cmd of required) {

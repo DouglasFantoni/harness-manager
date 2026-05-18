@@ -35,7 +35,22 @@ const registry: Registry = {
   ],
   skillGlobs: [],
   skills: [
-    { name: 'nestjs', domain: 'backend', weight: 800, exposes_command: [], required_by: ['/review'], load_with: [], conflicts_with: [] },
+    {
+      name: 'test-domain',
+      domain: 'backend',
+      weight: 800,
+      globs: ['**/*.ts'],
+      exposes_command: [],
+      required_by: ['/review'],
+      load_with: [],
+      conflicts_with: [],
+      source: null,
+      sync: true,
+    },
+  ],
+  hooks: [
+    { name: 'pre-task', file: 'pre-task.md', triggers: 'start', blocks: true, weight: 300, always_load: true },
+    { name: 'on-error', file: 'on-error.md', triggers: 'error', blocks: true, weight: 250, always_load: true },
   ],
 }
 
@@ -213,8 +228,7 @@ describe('CursorAdapter', () => {
 
   it('registry sem commands não lança erro', async () => {
     const { CursorAdapter } = await import('../../src/adapters/cursor.js')
-    const emptyRegistry: Registry = { commands: [], skillGlobs: [],
-  skills: [] }
+    const emptyRegistry: Registry = { commands: [], skillGlobs: [], skills: [], hooks: [] }
     const adapter = new CursorAdapter(cursorConfig, project, emptyRegistry)
     await expect(adapter.generate()).resolves.toBeDefined()
   })
@@ -273,6 +287,39 @@ describe('CursorAdapter', () => {
     expect(await fileExists(skillPath)).toBe(true)
     const main = await readFile(resolve(TMP, '.cursor/rules/harness-main.mdc'), 'utf-8')
     expect(main).toContain(`${customRoot}/`)
+  })
+
+  it('gera hooks.json com entradas _harness a partir dos hooks markdown', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    const hooksJson = JSON.parse(
+      await readFile(resolve(TMP, '.cursor/hooks.json'), 'utf-8'),
+    )
+    expect(hooksJson.version).toBe(1)
+    expect(hooksJson.hooks.beforeSubmitPrompt?.some((h: { _harness: string }) => h._harness === 'pre-task')).toBe(true)
+    expect(hooksJson.hooks.postToolUseFailure?.some((h: { _harness: string }) => h._harness === 'on-error')).toBe(true)
+  })
+
+  it('gera MCP recomendado quando supports_mcp é true', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(cursorConfig, project, registry)
+    await adapter.generate()
+    expect(await fileExists(resolve(TMP, '.cursor/mcp.recommended.json'))).toBe(true)
+    expect(await fileExists(resolve(TMP, '.cursor/MCP-RECOMMENDED.md'))).toBe(true)
+    const main = await readFile(resolve(TMP, '.cursor/rules/harness-main.mdc'), 'utf-8')
+    expect(main).toContain('MCP-RECOMMENDED.md')
+  })
+
+  it('não gera MCP quando supports_mcp é false', async () => {
+    const { CursorAdapter } = await import('../../src/adapters/cursor.js')
+    const adapter = new CursorAdapter(
+      { ...cursorConfig, supports_mcp: false },
+      project,
+      registry,
+    )
+    await adapter.generate()
+    expect(await fileExists(resolve(TMP, '.cursor/mcp.recommended.json'))).toBe(false)
   })
 
   it('remove subtree espelhada obsoleta na próxima sync', async () => {
@@ -399,6 +446,7 @@ describe('CopilotAdapter', () => {
     enabled: false,
     slash_commands: false,
     context_file: '.github/copilot-instructions.md',
+    copilot_mirror_root: '.github/harness',
     supports_mcp: false,
     context_budget: 'small',
     context_tokens_est: 3000,
@@ -436,5 +484,26 @@ describe('CopilotAdapter', () => {
     await adapter.generate(true)
     const exists = await fileExists(resolve(TMP, '.github/copilot-instructions.md'))
     expect(exists).toBe(false)
+  })
+
+  it('espelha skills e hooks compactos em .github/harness/', async () => {
+    const { CopilotAdapter } = await import('../../src/adapters/copilot.js')
+    const adapter = new CopilotAdapter(copilotConfig, project, registry)
+    await adapter.generate()
+    const skillMirror = resolve(TMP, '.github/harness/skills/test-domain.md')
+    const hookMirror = resolve(TMP, '.github/harness/hooks/pre-task.md')
+    expect(await fileExists(skillMirror)).toBe(true)
+    expect(await fileExists(hookMirror)).toBe(true)
+    const instructions = await readFile(resolve(TMP, '.github/copilot-instructions.md'), 'utf-8')
+    expect(instructions).toContain('.github/harness/skills/test-domain.md')
+    expect(instructions).toContain('.github/harness/hooks/pre-task.md')
+  })
+
+  it('não inclui pre-task inline completo — referencia mirror', async () => {
+    const { CopilotAdapter } = await import('../../src/adapters/copilot.js')
+    const adapter = new CopilotAdapter(copilotConfig, project, registry)
+    await adapter.generate()
+    const instructions = await readFile(resolve(TMP, '.github/copilot-instructions.md'), 'utf-8')
+    expect(instructions).not.toMatch(/## Antes de Qualquer Task/)
   })
 })

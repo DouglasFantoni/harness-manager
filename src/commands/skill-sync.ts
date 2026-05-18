@@ -1,13 +1,22 @@
-import { readFile, writeFile, mkdir, access } from 'fs/promises'
+import { access, mkdir, readFile, writeFile } from 'fs/promises'
 import { resolve } from 'path'
+import {
+    compareSemver,
+    fetchRegistryText,
+    formatSemverWarning,
+    loadRegistryConfig,
+    localInstallName,
+    parsePackageRef,
+    resolveSkillChangelogUrl,
+    resolveSkillUrl,
+    scopeTokenEnv,
+} from '../registry-remote.js'
 
 function harnessDir() { return resolve(process.cwd(), '.harness') }
 function skillsDir() { return resolve(harnessDir(), 'skills') }
 
 const CUSTOM_START = '<!-- HARNESS:CUSTOM:START -->'
 const CUSTOM_END   = '<!-- HARNESS:CUSTOM:END -->'
-
-const REGISTRY_BASE = 'https://raw.githubusercontent.com/DouglasFantoni/harness-manager/main/registry/skills'
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -16,6 +25,7 @@ interface SkillMeta {
   version?: string
   synced_at?: string
   sync?: boolean
+  registry_ref?: string
 }
 
 interface SyncResult {
@@ -24,6 +34,7 @@ interface SyncResult {
   fromVersion?: string
   toVersion?: string
   error?: string
+  breaking?: boolean
 }
 
 // ─── Comandos públicos ────────────────────────────────────────────────────────
@@ -46,49 +57,64 @@ export async function runSkillSync(args: string[]): Promise<void> {
 }
 
 export async function runSkillAdd(args: string[]): Promise<void> {
-  const name = args[0]
+  const input = args[0]
 
-  if (!name) {
-    console.error('❌ Informe o nome da skill: harness skill-add <nome>')
-    console.log(`\n   Skills disponíveis em: ${REGISTRY_BASE}/../README.md`)
+  if (!input) {
+    console.error('❌ Informe a skill: harness skill-add <nome> | @escopo/nome> | <url>')
+    const cfg = await loadRegistryConfig()
+    console.log(`\n   Registry oficial: ${cfg.skills_base_url}`)
+    console.log('   Escopos privados: registry.scopes em harness.config.json')
     process.exit(1)
   }
 
-  const url = `${REGISTRY_BASE}/${name}/SKILL.md`
-  const destDir = resolve(skillsDir(), name)
+  const registryConfig = await loadRegistryConfig()
+  let ref: ReturnType<typeof parsePackageRef>
+  let url: string
+
+  try {
+    ref = parsePackageRef(input)
+    url = resolveSkillUrl(input, registryConfig)
+  } catch (err: unknown) {
+    console.error(`❌ ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+
+  const installName = localInstallName(ref)
+  const destDir = resolve(skillsDir(), installName)
   const destPath = resolve(destDir, 'SKILL.md')
 
   if (await fileExists(destPath)) {
-    console.log(`⚠️  Skill "${name}" já existe em .harness/skills/${name}/`)
-    console.log('   Para atualizar: harness skill-sync ' + name)
+    console.log(`⚠️  Skill já existe em .harness/skills/${installName}/`)
+    console.log('   Para atualizar: harness skill-sync ' + installName)
     return
   }
 
-  console.log(`📥 Buscando skill "${name}" da registry...\n`)
+  console.log(`📥 Buscando skill "${input}" da registry...\n`)
 
   let remote: string
   try {
-    remote = await fetchRemote(url)
+    remote = await fetchRegistryText(url, { tokenEnv: scopeTokenEnv(ref, registryConfig) })
   } catch {
-    console.error(`❌ Skill "${name}" não encontrada na registry.`)
+    console.error(`❌ Skill "${input}" não encontrada na registry.`)
     console.log(`   URL tentada: ${url}`)
-    console.log(`\n   Skills disponíveis: ${REGISTRY_BASE}/../README.md`)
     process.exit(1)
   }
 
-  // Injeta meta local (source, sync) no SKILL.md remoto
+  const version = extractVersion(remote) ?? undefined
   const withMeta = injectLocalMeta(remote, {
     source: url,
-    version: extractVersion(remote) ?? undefined,
+    version,
     synced_at: today(),
     sync: true,
+    registry_ref: ref.raw,
   })
 
   await mkdir(destDir, { recursive: true })
   await writeFile(destPath, withMeta, 'utf-8')
 
-  console.log(`✅ Skill "${name}" instalada em .harness/skills/${name}/SKILL.md`)
-  console.log(`   Versão: ${extractVersion(remote) ?? 'desconhecida'}`)
+  console.log(`✅ Skill instalada em .harness/skills/${installName}/SKILL.md`)
+  console.log(`   Referência: ${ref.raw}`)
+  console.log(`   Versão: ${version ?? 'desconhecida'}`)
   console.log(`   Source: ${url}`)
   console.log('\n   Para customizar, edite a seção:')
   console.log('   ## Customizações do projeto')
@@ -125,14 +151,18 @@ async function syncSkill(name: string, dryRun: boolean): Promise<SyncResult> {
     return { skill: name, status: 'no-source' }
   }
 
+  const registryConfig = await loadRegistryConfig()
   let remote: string
   try {
-    remote = await fetchRemote(meta.source)
-  } catch (err: any) {
-    return { skill: name, status: 'error', error: err.message }
+    remote = await fetchRegistryText(meta.source, {
+      tokenEnv: tokenEnvForSkillMeta(meta, registryConfig),
+    })
+  } catch (err: unknown) {
+    return { skill: name, status: 'error', error: err instanceof Error ? err.message : String(err) }
   }
 
   const remoteVersion: string | undefined = extractVersion(remote) ?? undefined
+  const semver = compareSemver(meta.version, remoteVersion)
 
   // Mesma versão — sem mudanças
   if (meta.version && remoteVersion === meta.version) {
@@ -140,6 +170,11 @@ async function syncSkill(name: string, dryRun: boolean): Promise<SyncResult> {
   }
 
   if (!dryRun) {
+    const warning = formatSemverWarning(name, meta.version, remoteVersion, semver)
+    if (warning) {
+      console.log(warning)
+      await logChangelogIfPresent(meta.source, registryConfig, meta)
+    }
     const merged = mergeSkill(local, remote, meta)
     await writeFile(skillPath, merged, 'utf-8')
   }
@@ -149,6 +184,7 @@ async function syncSkill(name: string, dryRun: boolean): Promise<SyncResult> {
     status: 'updated',
     fromVersion: meta.version,
     toVersion: remoteVersion ?? undefined,
+    breaking: semver.breaking,
   }
 }
 
@@ -171,11 +207,16 @@ async function checkUpdates(target?: string): Promise<void> {
     }
 
     try {
-      const remote = await fetchRemote(meta.source)
+      const registryConfig = await loadRegistryConfig()
+      const remote = await fetchRegistryText(meta.source, {
+        tokenEnv: tokenEnvForSkillMeta(meta, registryConfig),
+      })
       const remoteVersion = extractVersion(remote)
+      const semver = compareSemver(meta.version, remoteVersion)
 
       if (remoteVersion && remoteVersion !== meta.version) {
-        console.log(`   🆕 ${name}: ${meta.version ?? '?'} → ${remoteVersion}`)
+        const majorTag = semver.breaking ? ' ⚠️ MAJOR' : ''
+        console.log(`   🆕 ${name}: ${meta.version ?? '?'} → ${remoteVersion}${majorTag}`)
         hasUpdates = true
       } else {
         console.log(`   ✅ ${name}: atualizado (${meta.version ?? '?'})`)
@@ -216,6 +257,7 @@ function mergeSkill(local: string, remote: string, localMeta: SkillMeta): string
     version: remoteVersion ?? localMeta.version,
     synced_at: today(),
     sync: localMeta.sync ?? true,
+    registry_ref: localMeta.registry_ref,
   })
 
   // 3. Injeta o bloco de customização no remote
@@ -263,10 +305,11 @@ function extractMeta(content: string): SkillMeta {
     const [key, ...rest] = line.split(':')
     const value = rest.join(':').trim().replace(/['"]/g, '')
 
-    if (key?.trim() === 'source')     meta.source     = value
-    if (key?.trim() === 'version')    meta.version    = value
-    if (key?.trim() === 'synced_at')  meta.synced_at  = value
-    if (key?.trim() === 'sync')       meta.sync       = value !== 'false'
+    if (key?.trim() === 'source')        meta.source        = value
+    if (key?.trim() === 'version')       meta.version       = value
+    if (key?.trim() === 'synced_at')     meta.synced_at     = value
+    if (key?.trim() === 'registry_ref')  meta.registry_ref  = value
+    if (key?.trim() === 'sync')          meta.sync          = value !== 'false'
   }
 
   return meta
@@ -292,7 +335,7 @@ function injectLocalMeta(content: string, localMeta: SkillMeta): string {
   // Remove campos locais que possam estar no remote (não devem sobrescrever)
   const filtered = lines.filter(l => {
     const key = l.split(':')[0]?.trim()
-    return !['source', 'sync', 'synced_at'].includes(key)
+    return !['source', 'sync', 'synced_at', 'registry_ref'].includes(key)
   })
 
   // Atualiza version se fornecida
@@ -305,8 +348,9 @@ function injectLocalMeta(content: string, localMeta: SkillMeta): string {
 
   // Adiciona campos locais no final do bloco
   const localFields: string[] = []
-  if (localMeta.source)    localFields.push(`source: "${localMeta.source}"`)
-  if (localMeta.synced_at) localFields.push(`synced_at: "${localMeta.synced_at}"`)
+  if (localMeta.source)       localFields.push(`source: "${localMeta.source}"`)
+  if (localMeta.registry_ref) localFields.push(`registry_ref: "${localMeta.registry_ref}"`)
+  if (localMeta.synced_at)    localFields.push(`synced_at: "${localMeta.synced_at}"`)
   localFields.push(`sync: ${localMeta.sync ?? true}`)
 
   const newYaml = [...withVersion, ...localFields].join('\n')
@@ -353,10 +397,36 @@ function printSyncResults(results: SyncResult[], dryRun: boolean): void {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-async function fetchRemote(url: string): Promise<string> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`HTTP ${res.status} — ${url}`)
-  return res.text()
+function tokenEnvForSkillMeta(
+  meta: SkillMeta,
+  config: Awaited<ReturnType<typeof loadRegistryConfig>>,
+): string | undefined {
+  if (!meta.registry_ref) return undefined
+  try {
+    const ref = parsePackageRef(meta.registry_ref)
+    return scopeTokenEnv(ref, config)
+  } catch {
+    return undefined
+  }
+}
+
+async function logChangelogIfPresent(
+  sourceUrl: string | undefined,
+  config: Awaited<ReturnType<typeof loadRegistryConfig>>,
+  meta: SkillMeta,
+): Promise<void> {
+  if (!sourceUrl) return
+  const changelogUrl = resolveSkillChangelogUrl(sourceUrl)
+  if (!changelogUrl) return
+  try {
+    const body = await fetchRegistryText(changelogUrl, {
+      tokenEnv: tokenEnvForSkillMeta(meta, config),
+    })
+    const preview = body.trim().split('\n').slice(0, 12).join('\n')
+    console.log(`\n   CHANGELOG (preview):\n${preview}\n`)
+  } catch {
+    // optional file
+  }
 }
 
 async function listSkillDirs(): Promise<string[]> {
