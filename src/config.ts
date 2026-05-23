@@ -75,6 +75,29 @@ function validateRegistryUrl(url: string, field: string): void {
   }
 }
 
+function validateSkillsConfig(config: HarnessConfig): void {
+  const skills = config.skills
+  if (!skills) return
+
+  if (typeof skills.source !== 'string' || !skills.source.trim()) {
+    throw new Error('harness.config.json: skills.source deve ser uma string não-vazia')
+  }
+  validateRelativePath(skills.source, 'skills.source')
+
+  if (!Array.isArray(skills.targets)) {
+    throw new Error('harness.config.json: skills.targets deve ser um array')
+  }
+  if (skills.targets.length === 0) {
+    throw new Error('harness.config.json: skills.targets não pode ser vazio')
+  }
+  for (const [i, target] of skills.targets.entries()) {
+    if (typeof target !== 'string') {
+      throw new Error(`harness.config.json: skills.targets[${i}] deve ser uma string`)
+    }
+    validateRelativePath(target, `skills.targets[${i}]`)
+  }
+}
+
 function validate(config: HarnessConfig, project: ProjectDetails): void {
   if (!config.tools) {
     throw new Error('harness.config.json: campo "tools" ausente')
@@ -99,6 +122,7 @@ function validate(config: HarnessConfig, project: ProjectDetails): void {
     validateRelativePath(copilot.copilot_mirror_root, 'tools.copilot.copilot_mirror_root')
   }
 
+  validateSkillsConfig(config)
   validateEvolutionConfig(config)
   validateRegistryConfig(config.registry)
 
