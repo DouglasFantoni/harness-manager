@@ -2,6 +2,7 @@ import { cp, writeFile, readFile, access } from 'fs/promises'
 import { resolve, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { detectProject } from '../detector/index.js'
+import { linkSkills } from '../skills-link.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const SCAFFOLD = resolve(__dirname, '../../scaffold')
@@ -42,7 +43,10 @@ export async function runInit(args: string[]): Promise<void> {
   })
   console.log('   ✅ Estrutura base criada\n')
 
-  // 3. Detecta o projeto e gera project-details.json
+  // 3. Cria symlinks (ou cópias no Windows) para as ferramentas de AI
+  await runSkillsLink()
+
+  // 4. Detecta o projeto e gera project-details.json
   const detailsPath = resolve(harnessDir(), 'project-details.json')
   const detailsExists = await fileExists(detailsPath)
 
@@ -78,8 +82,42 @@ export async function runInit(args: string[]): Promise<void> {
     console.log('✅ Pronto. Rode: harness sync\n')
   }
 
-  // 4. Dica de performance
+  // 5. Dica de performance
   console.log('⚡ Dicas de performance: https://github.com/DouglasFantoni/harness-manager/blob/main/PERFORMANCE.md\n')
+}
+
+// ─── Skills Link ─────────────────────────────────────────────────────────────
+
+async function runSkillsLink(): Promise<void> {
+  // Read skills config from the scaffold that was just copied
+  const configPath = resolve(harnessDir(), 'harness.config.json')
+  let skillsSource = '.harness/skills'
+  let skillsTargets = ['.claude/skills', '.cursor/skills', '.github/skills']
+
+  try {
+    const raw = await readFile(configPath, 'utf-8')
+    const config = JSON.parse(raw)
+    if (config.skills?.source) skillsSource = config.skills.source
+    if (Array.isArray(config.skills?.targets)) skillsTargets = config.skills.targets
+  } catch {
+    // use defaults if config not readable yet
+  }
+
+  const results = await linkSkills({
+    projectRoot: getRoot(),
+    source: skillsSource,
+    targets: skillsTargets,
+    dryRun: false,
+  })
+
+  const strategyLabel = results[0]?.strategy ?? 'symlink'
+  console.log(`🔗 Skills vinculadas (${strategyLabel}):`)
+  for (const r of results) {
+    const targetRel = r.target.replace(getRoot() + '/', '')
+    const actionLabel = r.action === 'replaced' ? 'atualizado' : 'criado'
+    console.log(`   → ${targetRel} [${actionLabel}]`)
+  }
+  console.log()
 }
 
 // ─── Patches ─────────────────────────────────────────────────────────────────
@@ -140,6 +178,10 @@ CLAUDE.md
 .harness/adapters/
 .harness/evolution/proposed/*
 !.harness/evolution/proposed/.gitkeep
+# AI Harness — skills links (gerados pelo harness init/sync)
+.claude/skills
+.cursor/skills
+.github/skills
 `
 
   let current = ''
