@@ -10,6 +10,7 @@ import { generateIndexFiles } from './index-generator.js'
 import { loadRegistry } from './registry.js'
 import { resetWarnings } from './resolver.js'
 import { generateSkillMinFiles } from './skill-minifier.js'
+import { linkSkills } from './skills-link.js'
 import type { SyncFlags } from './types.js'
 
 const ADAPTERS = {
@@ -45,6 +46,30 @@ export async function runSync(flags: SyncFlags): Promise<void> {
       const pct = Math.round((1 - totalAfter / totalBefore) * 100)
       console.log(`⚡ ${changed.length} skill(s) minificada(s) — ${totalBefore} → ${totalAfter} tokens (-${pct}%)\n`)
     }
+  }
+
+  // Skills link — symlink (Linux/Mac/WSL) ou copy (Windows nativo)
+  if (config.skills) {
+    const linkResults = await linkSkills({
+      projectRoot: process.cwd(),
+      source: config.skills.source,
+      targets: config.skills.targets,
+      dryRun: flags.dryRun,
+    })
+
+    const icon = flags.dryRun ? '🔍' : '🔗'
+    const strategyLabel = linkResults[0]?.strategy ?? 'symlink'
+    console.log(`${icon} skills (${strategyLabel}):`)
+    for (const r of linkResults) {
+      const targetRel = relative(process.cwd(), r.target)
+      if (flags.dryRun) {
+        console.log(`   → ${targetRel} (dry-run)`)
+      } else {
+        const actionLabel = r.action === 'replaced' ? 'atualizado' : 'criado'
+        console.log(`   → ${targetRel} [${actionLabel}]`)
+      }
+    }
+    console.log()
   }
 
   const registry = await loadRegistry()
@@ -100,6 +125,10 @@ export async function runSync(flags: SyncFlags): Promise<void> {
 
   const skipped = Object.entries(config.tools).filter(([, t]) => !t.enabled)
 
+  // When skills.targets is configured, the CursorAdapter should skip its
+  // legacy mirrorHarnessAgentSkills step (skills are already linked above).
+  const skillsLinkActive = !!config.skills
+
   for (const [toolName, toolConfig] of toolEntries) {
     const AdapterClass = ADAPTERS[toolName as ToolName]
 
@@ -108,7 +137,10 @@ export async function runSync(flags: SyncFlags): Promise<void> {
       continue
     }
 
-    const adapter = new AdapterClass(toolConfig, project, registry)
+    const adapter = toolName === 'cursor'
+      ? new CursorAdapter(toolConfig, project, registry, { skipSkillsMirror: skillsLinkActive })
+      : new AdapterClass(toolConfig, project, registry)
+
     const result = await adapter.generate(flags.dryRun)
 
     const icon = flags.dryRun ? '🔍' : '✅'
