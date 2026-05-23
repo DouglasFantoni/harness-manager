@@ -3,15 +3,29 @@ export interface ToolConfig {
   slash_commands: boolean
   rules_format?: 'mdc'
   rules_folder?: string
-  /** Cursor: subtree (relative to project root) wiped and rewritten with mirrored Agent Skills. */
+  /** Cursor: subtree (relative to project root) wiped and rewritten with mirrored Agent Skills.
+   * @deprecated Use top-level `skills.targets` instead. Kept for backward compatibility. */
   agent_skills_mirror_root?: string
-  /** Copilot: compact skills/hooks mirror (default `.github/harness`). */
+  /** Copilot: compact skills/hooks mirror (default `.github/harness`).
+   * @deprecated Use top-level `skills.targets` instead. Kept for backward compatibility. */
   copilot_mirror_root?: string
   context_file?: string
   supports_mcp: boolean
   supports_bash?: boolean
   context_budget: 'small' | 'medium' | 'large'
   context_tokens_est: number
+}
+
+/** Skills source-of-truth and symlink/copy targets across AI tools. */
+export interface SkillsSyncConfig {
+  /** Relative path to the skills source directory (e.g. '.harness/skills'). */
+  source: string
+  /**
+   * Relative paths where skills should be linked or copied.
+   * Each entry becomes a symlink (Linux/Mac/WSL) or directory copy (Windows native).
+   * e.g. ['.claude/skills', '.cursor/skills', '.github/skills']
+   */
+  targets: string[]
 }
 
 /** Evolution loop: feedback intervals and last-run timestamps (ISO date YYYY-MM-DD). */
@@ -49,6 +63,8 @@ export interface HarnessConfig {
     load_on_demand: string[]
     never_load: string[]
   }
+  /** Skills source-of-truth and link targets. When present, replaces legacy mirror adapters. */
+  skills?: SkillsSyncConfig
   evolution?: EvolutionConfig
   registry?: RegistryConfig
 }
