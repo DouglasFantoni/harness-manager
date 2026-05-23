@@ -1,12 +1,19 @@
 {
   "version": "1.0.0",
+  "skills": {
+    "source": ".harness/skills",
+    "targets": [
+      ".claude/skills",
+      ".cursor/skills",
+      ".github/skills"
+    ]
+  },
   "tools": {
     "cursor": {
       "enabled": true,
       "slash_commands": true,
       "rules_format": "mdc",
       "rules_folder": ".cursor/rules/",
-      "agent_skills_mirror_root": ".cursor/skills/_harness",
       "supports_mcp": true,
       "context_budget": "medium",
       "context_tokens_est": 8000
@@ -24,7 +31,6 @@
       "enabled": false,
       "slash_commands": false,
       "context_file": ".github/copilot-instructions.md",
-      "copilot_mirror_root": ".github/harness",
       "supports_mcp": false,
       "context_budget": "small",
       "context_tokens_est": 3000
