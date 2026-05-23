@@ -47,3 +47,32 @@ Ou append manual:
 
 Se o passo 2 gerou entradas → sugira ao usuário rodar `/harness-update`.
 Nunca aplique mudanças no harness automaticamente.
+
+## 5. Trace de execução
+
+Verifique se `.harness/evolution/traces/.recording` existe.
+
+Se existir:
+1. Leia `.harness/evolution/traces/_template.json`
+2. Preencha todos os campos com o que aconteceu nesta task:
+   - `id` e `timestamp`: data/hora atual no formato `YYYY-MM-DDTHH-MM-SS`
+   - `tool`: `"cursor"` | `"claude-code"` | `"copilot"`
+   - `task`: descrição curta da task executada
+   - `skills_loaded`: lista das skills carregadas nesta sessão
+   - `hooks_fired`: hooks que dispararam (incluindo este)
+   - `commands_run`: comandos de validação executados (typecheck, lint, test)
+   - `files_modified`: arquivos criados ou editados
+   - `errors_encountered`: erros que apareceram durante a execução
+   - `resolution`: como o erro principal foi resolvido (string vazia se sem erros)
+   - `revisions_needed`: quantas tentativas foram necessárias até o resultado final
+   - `outcome`: `"success"` | `"partial"` | `"failed"`
+   - `typecheck_passed`: `true` | `false` | `null` (se não rodou)
+   - `tests_passed`: `true` | `false` | `null` (se não rodou)
+   - `notes`: observações livres (opcional)
+3. Salve em `.harness/evolution/traces/{timestamp}-{task-slug}.json`
+   onde `task-slug` é 2-4 palavras da task em kebab-case
+
+Se não existir, pule esta seção silenciosamente.
+
+> Campos que não conseguir determinar: use `null` para booleanos, `[]` para arrays, `""` para strings.
+> Nunca invente valores.

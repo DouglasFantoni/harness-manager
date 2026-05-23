@@ -1,0 +1,17 @@
+{
+  "id": "",
+  "timestamp": "",
+  "tool": "",
+  "task": "",
+  "skills_loaded": [],
+  "hooks_fired": [],
+  "commands_run": [],
+  "files_modified": [],
+  "errors_encountered": [],
+  "resolution": "",
+  "revisions_needed": 0,
+  "outcome": "",
+  "typecheck_passed": null,
+  "tests_passed": null,
+  "notes": ""
+}

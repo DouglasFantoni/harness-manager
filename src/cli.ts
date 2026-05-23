@@ -7,6 +7,7 @@ import { runMetrics } from './commands/metrics.js'
 import { runPrompt } from './commands/prompt.js'
 import { runProposals } from './commands/proposals.js'
 import { runRuleAdd, runRuleSync } from './commands/rule-sync.js'
+import { runTrace } from './commands/trace.js'
 import { runSkillAdd, runSkillSync } from './commands/skill-sync.js'
 import { runSyncWatch } from './sync-watch.js'
 import { runSync } from './sync.js'
@@ -42,6 +43,13 @@ const USAGE = `
     harness rule-sync --check            Mostra quais têm update disponível
     harness rule-sync --dry-run          Mostra diff sem aplicar
 
+    harness trace --record               Ativa gravação de traces
+    harness trace --stop                 Desativa gravação
+    harness trace --status               Estado atual e resumo
+    harness trace --list                 Lista traces coletados
+    harness trace --show <id>            Exibe trace completo
+    harness trace --clear                Remove todos os traces
+
     harness feedback add --task "..." --outcome success --confidence 4
     harness feedback list [--since 7] [--json]
 
@@ -74,6 +82,11 @@ async function main() {
 
   if (command === 'init') {
     await runInit(args)
+    return
+  }
+
+  if (command === 'trace') {
+    await runTrace(args)
     return
   }
 

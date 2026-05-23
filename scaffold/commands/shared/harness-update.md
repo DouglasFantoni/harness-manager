@@ -19,6 +19,15 @@ globs: []
 ## Steps
 
 1. Carregar `skills/_self-update/SKILL.md` e seguir suas regras à risca
+1.5. Verificar se existem traces em `evolution/traces/`:
+   - Se existirem arquivos `.json` (exceto `_template.json`), ler os **10 mais recentes**
+   - Usar os traces para identificar padrões antes de propor mudanças:
+     - Skills que aparecem em traces com `outcome: failed` ou `revisions_needed > 1`
+     - Erros em `errors_encountered` que se repetem entre traces
+     - Comandos em `commands_run` que resultam em falha recorrente
+     - Resoluções repetidas em `resolution` — candidatas a virar regra permanente
+   - Se não existirem traces, pular este passo silenciosamente
+
 2. Listar o que foi aprendido na sessão atual:
    - Erros encontrados e resolvidos → `memory/mistakes.md`
    - Padrões que funcionaram bem → `memory/patterns.md`
