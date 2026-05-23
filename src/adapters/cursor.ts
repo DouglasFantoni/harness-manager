@@ -12,11 +12,21 @@ import { generateMcpRecommended } from './mcp-recommended.js'
 function getRoot() { return process.cwd() }
 function harnessRoot() { return resolve(getRoot(), '.harness') }
 
+export interface CursorAdapterOptions {
+  /**
+   * When true, skips the legacy mirrorHarnessAgentSkills step.
+   * Set by runSync when `config.skills.targets` is configured —
+   * skills are already linked via symlink/copy at that point.
+   */
+  skipSkillsMirror?: boolean
+}
+
 export class CursorAdapter {
   constructor(
     private toolConfig: ToolConfig,
     private project: ProjectDetails,
     private registry: Registry,
+    private options: CursorAdapterOptions = {},
   ) {}
 
   async generate(dryRun = false): Promise<AdapterResult> {
@@ -24,13 +34,16 @@ export class CursorAdapter {
     const root = getRoot()
     const rulesDir = resolve(root, this.toolConfig.rules_folder!)
 
-    const mirrorRootRel = this.agentSkillsMirrorRootRel()
-    const mirrorFiles = await mirrorHarnessAgentSkills({
-      projectRoot: root,
-      mirrorRootRel,
-      dryRun,
-    })
-    files.push(...mirrorFiles)
+    // Skills mirror — skipped when skills.targets handles linking natively
+    if (!this.options.skipSkillsMirror) {
+      const mirrorRootRel = this.agentSkillsMirrorRootRel()
+      const mirrorFiles = await mirrorHarnessAgentSkills({
+        projectRoot: root,
+        mirrorRootRel,
+        dryRun,
+      })
+      files.push(...mirrorFiles)
+    }
 
     const hookFiles = await generateCursorHooks({
       projectRoot: root,
@@ -122,6 +135,10 @@ export class CursorAdapter {
   private async buildMainRule(): Promise<string> {
     const rulesContent = await loadAllRules(harnessRoot())
 
+    const skillsNote = this.options.skipSkillsMirror
+      ? 'Skills nativas em `.cursor/skills/` (symlink → `.harness/skills/`).'
+      : `Cópias para Agent Skills do Cursor (layout nativo, geradas): \`${this.agentSkillsMirrorRootRel()}/\` — não edite à mão (caminho em \`harness.config.json\` → \`tools.cursor.agent_skills_mirror_root\`).`
+
     return this.buildMdc({
       description: `Harness principal — ${this.project.project.name}`,
       alwaysApply: true,
@@ -132,7 +149,7 @@ export class CursorAdapter {
 
 Antes de qualquer task, consulte \`.harness/hooks/pre-task.md\`.
 Índice de skills: \`.harness/skills/_index.md\`.
-Cópias para Agent Skills do Cursor (layout nativo, geradas): \`${this.agentSkillsMirrorRootRel()}/\` — não edite à mão (caminho em \`harness.config.json\` → \`tools.cursor.agent_skills_mirror_root\`).
+${skillsNote}
 Em caso de erro: \`.harness/hooks/on-error.md\`.
 Hooks executáveis (prompt): \`.cursor/hooks.json\` (gerado do harness; entradas \`_harness\` são substituídas no sync).
 ${this.toolConfig.supports_mcp ? 'MCP recomendado: `.cursor/MCP-RECOMMENDED.md` e template `.cursor/mcp.recommended.json` (copie para `mcp.json`).' : ''}
