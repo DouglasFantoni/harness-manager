@@ -1,4 +1,5 @@
 import { readFile, writeFile, unlink, readdir, mkdir, access } from 'fs/promises'
+import { runAnalyze } from './trace-analyzer.js'
 import { resolve } from 'path'
 import { createInterface } from 'readline'
 
@@ -18,6 +19,7 @@ export async function runTrace(args: string[]): Promise<void> {
     case '--list':    return listTraces()
     case '--clear':   return clearTraces()
     case '--show':    return showTrace(args[1])
+    case '--analyze': return analyze(args.includes('--dry-run'))
     default:
       printUsage()
       process.exit(1)
@@ -239,6 +241,46 @@ async function confirm(question: string): Promise<boolean> {
   })
 }
 
+async function analyze(dryRun: boolean): Promise<void> {
+  console.log('🔍 Analisando traces...\n')
+  const result = await runAnalyze(dryRun)
+  if (!result) return
+
+  // Imprime resumo no terminal
+  const critical = result.flags.filter(f => f.severity === 'critical')
+  const warnings  = result.flags.filter(f => f.severity === 'warning')
+  const infos     = result.flags.filter(f => f.severity === 'info')
+
+  console.log(`📊 ${result.total_traces} traces analisados (${result.period.from?.slice(0,10) ?? '?'} → ${result.period.to?.slice(0,10) ?? '?'})`)
+  console.log(`   Skills: ${Object.keys(result.skills).length} | Erros únicos: ${Object.keys(result.errors).length}`)
+  console.log()
+
+  if (result.flags.length === 0) {
+    console.log('✅ Nenhum padrão problemático detectado.')
+    return
+  }
+
+  if (critical.length > 0) {
+    console.log(`❌ ${critical.length} crítico(s):`)
+    critical.forEach(f => console.log(`   • ${f.message}`))
+    console.log()
+  }
+  if (warnings.length > 0) {
+    console.log(`⚠️  ${warnings.length} aviso(s):`)
+    warnings.forEach(f => console.log(`   • ${f.message}`))
+    console.log()
+  }
+  if (infos.length > 0) {
+    console.log(`ℹ️  ${infos.length} informativo(s):`)
+    infos.forEach(f => console.log(`   • ${f.message}`))
+    console.log()
+  }
+
+  if (!dryRun) {
+    console.log('\n  Para aplicar melhorias: /harness-update')
+  }
+}
+
 function printUsage(): void {
   console.log(`
 Uso: harness trace <subcomando>
@@ -249,5 +291,7 @@ Uso: harness trace <subcomando>
   --list            Lista traces coletados
   --show <id>       Exibe trace completo (aceita prefixo)
   --clear           Remove todos os traces (pede confirmação)
+  --analyze         Analisa todos os traces e gera _analysis.json
+  --analyze --dry-run  Mostra análise sem salvar
   `)
 }

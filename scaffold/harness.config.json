@@ -61,5 +61,32 @@
     "rules_base_url": "https://raw.githubusercontent.com/DouglasFantoni/harness-manager/main/registry/rules",
     "manifest_url": "https://raw.githubusercontent.com/DouglasFantoni/harness-manager/main/registry/manifest.json",
     "scopes": {}
+  },
+  "trace_analysis": {
+    "thresholds": {
+      "skill_high_failure_rate": 0.2,
+      "skill_needs_clarity_avg_revisions": 2.0,
+      "skill_conflict_occurrences": 3,
+      "skill_missing_occurrences": 3,
+      "skill_glob_gap_files": 5,
+      "skill_domain_gap_occurrences": 5,
+      "recurring_error_count": 3,
+      "error_without_resolution_count": 3,
+      "tool_specific_error_count": 3,
+      "error_same_file_count": 3,
+      "typecheck_instability_rate": 0.25,
+      "tests_instability_rate": 0.2,
+      "no_validation_on_failure_count": 3,
+      "validation_skipped_count": 5,
+      "pre_task_ignored_count": 3,
+      "post_task_ignored_count": 5,
+      "on_error_frequent_rate": 0.3,
+      "recurring_resolution_count": 3,
+      "partial_ceiling_count": 5,
+      "degradation_rate": 0.15,
+      "improvement_rate": 0.1,
+      "incomplete_traces_rate": 0.2,
+      "tool_compliance_deviation": 0.3
+    }
   }
 }

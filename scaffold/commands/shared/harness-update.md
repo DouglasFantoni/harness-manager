@@ -19,14 +19,19 @@ globs: []
 ## Steps
 
 1. Carregar `skills/_self-update/SKILL.md` e seguir suas regras à risca
-1.5. Verificar se existem traces em `evolution/traces/`:
-   - Se existirem arquivos `.json` (exceto `_template.json`), ler os **10 mais recentes**
-   - Usar os traces para identificar padrões antes de propor mudanças:
-     - Skills que aparecem em traces com `outcome: failed` ou `revisions_needed > 1`
-     - Erros em `errors_encountered` que se repetem entre traces
-     - Comandos em `commands_run` que resultam em falha recorrente
-     - Resoluções repetidas em `resolution` — candidatas a virar regra permanente
-   - Se não existirem traces, pular este passo silenciosamente
+1.5. Verificar se `evolution/traces/_analysis.json` existe.
+   - **Se existir**: ler o arquivo e usar os `flags` como ponto de partida para as propostas.
+     Cada flag já é um padrão detectado — priorize-os em ordem de severidade (`critical` → `warning` → `info`).
+     Exemplos de como cada flag se traduz em proposta:
+     - `skill_high_failure` → revisar `## Regras` e `## Contexto essencial` da skill
+     - `recurring_error` → adicionar ao `memory/mistakes.md` e considerar regra em rule pack
+     - `recurring_resolution` → adicionar como padrão em `memory/patterns.md` ou skill
+     - `skill_glob_gap` → adicionar globs faltantes ao `## Meta` da skill relevante
+     - `resolution_contradicts_rule` → resolver a contradição — regra ou resolução está errada
+     - `pre_task_ignored` → reforçar o `pre-task.md` para ser mais explícito
+     - `validation_skipped` → adicionar regra de validação obrigatória no rule pack
+   - **Se não existir mas houver traces**: informar ao usuário para rodar `harness trace --analyze` antes
+   - **Se não existir e não houver traces**: pular este passo silenciosamente
 
 2. Listar o que foi aprendido na sessão atual:
    - Erros encontrados e resolvidos → `memory/mistakes.md`
